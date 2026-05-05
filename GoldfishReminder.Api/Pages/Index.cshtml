@@ -1,0 +1,1132 @@
+﻿@page
+@using System.Text.Json
+@model GoldfishReminder.Api.Pages.IndexModel
+@{
+    Layout = null;
+    var activeTab = Model.ActiveTab;
+    var isBankTab = activeTab == "bankAccounts";
+    var isCardTab = activeTab == "creditSettings";
+    var isCurrentBillsTab = activeTab == "currentBills";
+    var isHistoryBillsTab = activeTab == "historyBills";
+
+    string GetAccountTypeText(string? accountType)
+    {
+        var normalized = (accountType ?? string.Empty).Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "digital" => "數位帳戶",
+            "physical" => "實體帳戶",
+            _ => accountType ?? string.Empty
+        };
+    }
+
+    string GetBankDisplayName(string bankCode, string bankName)
+    {
+        return string.IsNullOrWhiteSpace(bankName) ? bankCode : $"{bankCode} {bankName}";
+    }
+
+    var enabledAccounts = Model.BankAccounts.Where(x => x.Enabled).ToList();
+    var disabledAccounts = Model.BankAccounts.Where(x => !x.Enabled).ToList();
+    var jsonOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+    var impactJson = JsonSerializer.Serialize(Model.BankAccountImpacts, jsonOptions);
+    var historyYears = Model.HistoryMonthOptions
+        .Select(x => x.Year)
+        .Distinct()
+        .OrderByDescending(x => x)
+        .ToList();
+    var historyMonths = Model.HistoryMonthOptions
+        .Where(x => x.Year == Model.HistoryYear)
+        .Select(x => x.Month)
+        .Distinct()
+        .OrderByDescending(x => x)
+        .ToList();
+    var historyMonthMap = Model.HistoryMonthOptions
+        .GroupBy(x => x.Year)
+        .ToDictionary(
+            x => x.Key,
+            x => x.Select(y => y.Month).Distinct().OrderByDescending(y => y).ToList());
+    var historyMonthMapJson = JsonSerializer.Serialize(historyMonthMap, jsonOptions);
+}
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>金魚腦助手</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f6f7fb; }
+        .card { border: 0; border-radius: 14px; }
+        .shadow-soft { box-shadow: 0 10px 30px rgba(16, 24, 40, .08); }
+        .muted { color: #667085; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        .table thead th { color: #475467; font-weight: 600; }
+        .badge-soft { background: #f2f4f7; border: 1px solid #eaecf0; color: #344054; }
+        .impact-box { border: 1px solid #f0dca2; background: #fff8e6; border-radius: 12px; padding: 12px; }
+        .impact-detail-list { margin-bottom: 0; padding-left: 18px; }
+        .history-filter-form { max-width: 460px; }
+
+        /* Landing 區塊 */
+        .landing-hero { background: linear-gradient(135deg, #fff8ec 0%, #ffffff 100%); border: 1px solid #fce9c4; }
+        .landing-logo-img { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(255, 140, 50, .25)); }
+        .landing-tagline { font-size: 0.95rem; max-width: 600px; margin: 0 auto; }
+        .feature-icon { font-size: 2rem; line-height: 1; }
+        .step-box { background: #f8f9fb; border-radius: 12px; padding: 18px; border: 1px solid #eaecf0; height: 100%; }
+        .step-number { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: #0d6efd; color: #fff; font-weight: 600; font-size: 0.85rem; margin-bottom: 10px; }
+        .attribution-tag { font-size: 0.7rem; color: #a0a4aa; margin-left: 10px; }
+        .attribution-tag a { color: #a0a4aa; text-decoration: none; }
+        .attribution-tag a:hover { color: #667085; text-decoration: underline; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+    <div class="container">
+        <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="/">
+            <img src="~/logo.png" alt="金魚腦助手" width="32" height="32" />
+            <span>金魚腦助手 <small class="muted fw-normal">GoldfishReminder</small></span>
+        </a>
+    </div>
+</nav>
+
+<main class="container py-4">
+    @if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+    {
+        <div class="alert alert-info shadow-soft" role="alert">@Model.AlertMessage</div>
+    }
+
+    @if (Model.ShowLanding)
+    {
+        <div class="landing-hero card shadow-soft mb-4">
+            <div class="card-body py-5 px-4 px-md-5 text-center">
+                <div class="landing-logo mb-3">
+                    <img src="~/logo.png" alt="金魚腦助手" class="landing-logo-img" />
+                </div>
+                <h1 class="fw-bold mb-2">金魚腦助手</h1>
+                <div class="text-muted mb-4">讓信用卡帳單自己提醒你 再也不忘繳費</div>
+                <div class="landing-tagline muted">
+                    Discord Bot 搭配網頁後台 在結帳日 繳款日 餘額不足時 主動通知
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 landing-features">
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card shadow-soft h-100">
+                    <div class="card-body">
+                        <div class="feature-icon mb-2">📅</div>
+                        <div class="fw-semibold mb-1">結帳日提醒</div>
+                        <div class="muted small">
+                            每月結帳日當天主動詢問帳單金額<br />直到輸入為止
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card shadow-soft h-100">
+                    <div class="card-body">
+                        <div class="feature-icon mb-2">💰</div>
+                        <div class="fw-semibold mb-1">餘額追蹤</div>
+                        <div class="muted small">
+                            依據你登錄的帳戶餘額比對帳單金額<br />不足時主動提醒補款
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card shadow-soft h-100">
+                    <div class="card-body">
+                        <div class="feature-icon mb-2">⚡</div>
+                        <div class="fw-semibold mb-1">自動扣款記錄</div>
+                        <div class="muted small">
+                            足額時自動標記已繳<br />扣款帳戶餘額自動減去帳單金額
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card shadow-soft h-100">
+                    <div class="card-body">
+                        <div class="feature-icon mb-2">💬</div>
+                        <div class="fw-semibold mb-1">Discord 快速更新</div>
+                        <div class="muted small">
+                            使用 /balance 指令直接在 Discord 快速更新餘額<br />不用開網頁
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-soft mt-4">
+            <div class="card-body">
+                <div class="fw-semibold mb-3">使用流程</div>
+                <div class="row g-3">
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="step-box">
+                            <div class="step-number">1</div>
+                            <div class="fw-semibold">在 Discord 取得連結</div>
+                            <div class="muted small mt-1">
+                                到公告頻道點取得網頁連結<br />Bot 會傳送到你的專屬私人頻道
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="step-box">
+                            <div class="step-number">2</div>
+                            <div class="fw-semibold">新增帳戶並填入餘額</div>
+                            <div class="muted small mt-1">
+                                首次使用要手動輸入每個帳戶當前餘額<br />系統才能判斷足不足額
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="step-box">
+                            <div class="step-number">3</div>
+                            <div class="fw-semibold">設定信用卡</div>
+                            <div class="muted small mt-1">
+                                登錄每張卡的結帳日、繳款日、扣款帳戶
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="step-box">
+                            <div class="step-number">4</div>
+                            <div class="fw-semibold">等提醒與定期更新餘額</div>
+                            <div class="muted small mt-1">
+                                到時間自動 Discord 提醒<br />餘額變動時用網頁或 /balance 指令更新
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="muted small mt-3">
+                    註：本服務非串接銀行 API，所有數據均由使用者自行填入，可以安心使用
+                    <span class="attribution-tag">Icons by <a href="https://www.flaticon.com/free-icons/goldfish" target="_blank" rel="noopener">Freepik - Flaticon</a></span>
+                </div>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger shadow-soft" role="alert">
+            <div class="fw-semibold mb-1">無法載入頁面</div>
+            <div class="muted">@Model.ErrorMessage</div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="card shadow-soft">
+                    <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                        <div>
+                            <div class="fw-semibold fs-5">設定中心</div>
+                            <div class="muted">管理銀行帳戶 信用卡設定 本月待繳帳單 歷史帳單</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a class="btn btn-outline-primary" href="/?tab=@activeTab&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">重新整理</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-soft">
+                    <div class="card-body">
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item"><a class="nav-link @(isBankTab ? "active" : "")" href="/?tab=bankAccounts&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">帳戶設定</a></li>
+                            <li class="nav-item"><a class="nav-link @(isCardTab ? "active" : "")" href="/?tab=creditSettings&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">信用卡設定</a></li>
+                            <li class="nav-item"><a class="nav-link @(isCurrentBillsTab ? "active" : "")" href="/?tab=currentBills&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">本月待繳帳單</a></li>
+                            <li class="nav-item"><a class="nav-link @(isHistoryBillsTab ? "active" : "")" href="/?tab=historyBills&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">歷史帳單</a></li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div class="tab-pane fade @(isBankTab ? "show active" : "")">
+                                <div class="mt-3 card shadow-soft">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-semibold">啟用中銀行帳戶</div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="muted small">@enabledAccounts.Count 筆</span>
+                                                <button class="btn btn-sm btn-primary" type="button" id="btnAddBankAccount" data-bs-toggle="modal" data-bs-target="#bankAccountModal">+ 新增</button>
+                                            </div>
+                                        </div>
+                                        @if (enabledAccounts.Count == 0)
+                                        {
+                                            <div class="alert alert-warning mb-0">尚未有啟用中的銀行帳戶</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="table-responsive">
+                                                <table class="table table-sm align-middle">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>銀行代碼</th>
+                                                            <th>帳戶名稱</th>
+                                                            <th>帳戶類型</th>
+                                                            <th class="text-end">餘額</th>
+                                                            <th class="text-center">操作</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    @foreach (var bankAccount in enabledAccounts)
+                                                    {
+                                                        <tr>
+                                                            <td class="mono">@bankAccount.BankCode</td>
+                                                            <td>@bankAccount.AccountName</td>
+                                                            <td>@GetAccountTypeText(bankAccount.AccountType)</td>
+                                                            <td class="text-end mono">@bankAccount.Balance.ToString("N0")</td>
+                                                            <td class="text-center">
+                                                                <button class="btn btn-sm btn-outline-primary"
+                                                                        type="button"
+                                                                        data-bs-toggle="modal"
+                                                                        data-bs-target="#bankAccountModal"
+                                                                        data-id="@bankAccount.Id"
+                                                                        data-bankcode="@bankAccount.BankCode"
+                                                                        data-accountname="@bankAccount.AccountName"
+                                                                        data-accounttype="@bankAccount.AccountType"
+                                                                        data-enabled="@bankAccount.Enabled">
+                                                                    編輯
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+
+                                        <hr class="my-4" />
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="fw-semibold">停用中的銀行帳戶</div>
+                                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#disabledAccountsCollapse">展開 (@disabledAccounts.Count)</button>
+                                        </div>
+
+                                        <div class="collapse mt-3" id="disabledAccountsCollapse">
+                                            @if (disabledAccounts.Count == 0)
+                                            {
+                                                <div class="muted">目前沒有停用中的銀行帳戶</div>
+                                            }
+                                            else
+                                            {
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm align-middle">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>銀行代碼</th>
+                                                                <th>帳戶名稱</th>
+                                                                <th>帳戶類型</th>
+                                                                <th class="text-end">餘額</th>
+                                                                <th class="text-center">操作</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        @foreach (var bankAccount in disabledAccounts)
+                                                        {
+                                                            <tr>
+                                                                <td class="mono">@bankAccount.BankCode</td>
+                                                                <td>@bankAccount.AccountName</td>
+                                                                <td>@GetAccountTypeText(bankAccount.AccountType)</td>
+                                                                <td class="text-end mono">@bankAccount.Balance.ToString("N0")</td>
+                                                                <td class="text-center">
+                                                                    <button class="btn btn-sm btn-outline-primary"
+                                                                            type="button"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#bankAccountModal"
+                                                                            data-id="@bankAccount.Id"
+                                                                            data-bankcode="@bankAccount.BankCode"
+                                                                            data-accountname="@bankAccount.AccountName"
+                                                                            data-accounttype="@bankAccount.AccountType"
+                                                                            data-enabled="@bankAccount.Enabled">
+                                                                        編輯
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade @(isCardTab ? "show active" : "")">
+                                <div class="mt-3 card shadow-soft">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-semibold">信用卡設定清單</div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="muted small">@Model.CreditSettings.Count 筆</span>
+                                                <button class="btn btn-sm btn-primary" type="button" id="btnAddCreditSetting" data-bs-toggle="modal" data-bs-target="#creditSettingModal">+ 新增</button>
+                                            </div>
+                                        </div>
+                                        @if (Model.CreditSettings.Count == 0)
+                                        {
+                                            <div class="alert alert-warning mb-0">尚未有信用卡設定</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="table-responsive">
+                                                <table class="table table-sm align-middle">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>銀行代碼</th>
+                                                            <th>銀行名稱</th>
+                                                            <th>結帳日</th>
+                                                            <th>繳費日</th>
+                                                            <th>扣款帳戶</th>
+                                                            <th class="text-center">啟用</th>
+                                                            <th class="text-center">操作</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    @foreach (var creditSetting in Model.CreditSettings)
+                                                    {
+                                                        var bankName = Model.BankNameByCode.TryGetValue(creditSetting.BankCode, out var bn) ? bn : string.Empty;
+                                                        <tr>
+                                                            <td class="mono">@creditSetting.BankCode</td>
+                                                            <td>@(string.IsNullOrWhiteSpace(bankName) ? "-" : bankName)</td>
+                                                            <td class="mono">@creditSetting.StatementDay</td>
+                                                            <td class="mono">@creditSetting.PaymentDueDay</td>
+                                                            <td>
+                                                                @if (creditSetting.PaymentBankAccountId.HasValue && Model.PaymentAccountNameById.TryGetValue(creditSetting.PaymentBankAccountId.Value, out var paymentName))
+                                                                {
+                                                                    <span>@paymentName</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="muted">未設定</span>
+                                                                }
+                                                            </td>
+                                                            <td class="text-center">
+                                                                @if (creditSetting.Enabled)
+                                                                {
+                                                                    <span class="badge text-bg-success">是</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge text-bg-secondary">否</span>
+                                                                }
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <button class="btn btn-sm btn-outline-primary"
+                                                                        type="button"
+                                                                        data-bs-toggle="modal"
+                                                                        data-bs-target="#creditSettingModal"
+                                                                        data-id="@creditSetting.Id"
+                                                                        data-bankcode="@creditSetting.BankCode"
+                                                                        data-statementday="@creditSetting.StatementDay"
+                                                                        data-paymentdueday="@creditSetting.PaymentDueDay"
+                                                                        data-paymentaccountid="@(creditSetting.PaymentBankAccountId?.ToString() ?? "")"
+                                                                        data-enabled="@creditSetting.Enabled">
+                                                                    編輯
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade @(isCurrentBillsTab ? "show active" : "")">
+                                <div class="mt-3 card shadow-soft">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-semibold">本月待繳帳單</div>
+                                            <span class="muted small">@Model.CurrentBills.Count 筆</span>
+                                        </div>
+                                        @if (Model.CurrentBills.Count == 0)
+                                        {
+                                            <div class="alert alert-success mb-0">本月沒有待繳帳單</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="table-responsive">
+                                                <table class="table table-sm align-middle">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>銀行</th>
+                                                            <th>年月</th>
+                                                            <th>繳費日</th>
+                                                            <th class="text-end">帳單金額</th>
+                                                            <th>扣款帳戶</th>
+                                                            <th class="text-center">狀態</th>
+                                                            <th class="text-center">操作</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    @foreach (var currentBill in Model.CurrentBills)
+                                                    {
+                                                        <tr>
+                                                            <td>@GetBankDisplayName(currentBill.BankCode, currentBill.BankName)</td>
+                                                            <td class="mono">@currentBill.BillYear/@currentBill.BillMonth.ToString("D2")</td>
+                                                            <td class="mono">@currentBill.BillMonth.ToString("D2")/@currentBill.PaymentDueDay.ToString("D2")</td>
+                                                            <td class="text-end mono">
+                                                                @if (currentBill.AmountConfirmed && currentBill.BillAmount.HasValue)
+                                                                {
+                                                                    @currentBill.BillAmount.Value.ToString("N0")
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="muted">未確認</span>
+                                                                }
+                                                            </td>
+                                                            <td>@(string.IsNullOrWhiteSpace(currentBill.PaymentAccountName) ? "未設定" : currentBill.PaymentAccountName)</td>
+                                                            <td class="text-center">
+                                                                @if (currentBill.Paid)
+                                                                {
+                                                                    <span class="badge text-bg-secondary">已繳費</span>
+                                                                }
+                                                                else if (!currentBill.AmountConfirmed)
+                                                                {
+                                                                    <span class="badge text-bg-warning">待輸入金額</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge text-bg-primary">待繳費</span>
+                                                                }
+                                                            </td>
+                                                            <td class="text-center">
+                                                                @if (!currentBill.Paid)
+                                                                {
+                                                                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                                                        <button class="btn btn-sm btn-outline-primary"
+                                                                                type="button"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#billAmountModal"
+                                                                                data-billid="@currentBill.Id"
+                                                                                data-billamount="@(currentBill.BillAmount ?? 0)">
+                                                                            修改金額
+                                                                        </button>
+                                                                        @if (currentBill.AmountConfirmed && string.IsNullOrWhiteSpace(currentBill.PaymentAccountName))
+                                                                        {
+                                                                            <form method="post" asp-page="/Index" asp-page-handler="MarkBillPaid" class="d-inline">
+                                                                                @Html.AntiForgeryToken()
+                                                                                <input type="hidden" name="tab" value="currentBills" />
+                                                                                <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
+                                                                                <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
+                                                                                <input type="hidden" name="billId" value="@currentBill.Id" />
+                                                                                <button type="submit" class="btn btn-sm btn-outline-success">確認已繳費</button>
+                                                                            </form>
+                                                                        }
+                                                                    </div>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade @(isHistoryBillsTab ? "show active" : "")">
+                                <div class="mt-3 card shadow-soft">
+                                    <div class="card-body">
+                                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                                            <div>
+                                                <div class="fw-semibold">歷史帳單</div>
+                                                <div class="muted small">可用年份與月份篩選</div>
+                                            </div>
+                                            <form method="get" class="history-filter-form d-flex gap-2">
+                                                <input type="hidden" name="tab" value="historyBills" />
+                                                <select class="form-select form-select-sm" name="historyYear" id="historyYearSelect">
+                                                    @foreach (var year in historyYears)
+                                                    {
+                                                        <option value="@year" selected="@(year == Model.HistoryYear)">@year</option>
+                                                    }
+                                                </select>
+                                                <select class="form-select form-select-sm" name="historyMonth" id="historyMonthSelect">
+                                                    @foreach (var month in historyMonths)
+                                                    {
+                                                        <option value="@month" selected="@(month == Model.HistoryMonth)">@month.ToString("D2")</option>
+                                                    }
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">查詢</button>
+                                            </form>
+                                        </div>
+
+                                        @if (Model.HistoryBills.Count == 0)
+                                        {
+                                            <div class="alert alert-warning mb-0">目前查無歷史帳單</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="table-responsive">
+                                                <table class="table table-sm align-middle">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>銀行</th>
+                                                            <th>年月</th>
+                                                            <th class="text-end">帳單金額</th>
+                                                            <th class="text-center">是否已繳費</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    @foreach (var historyBill in Model.HistoryBills)
+                                                    {
+                                                        <tr>
+                                                            <td>@GetBankDisplayName(historyBill.BankCode, historyBill.BankName)</td>
+                                                            <td class="mono">@historyBill.BillYear/@historyBill.BillMonth.ToString("D2")</td>
+                                                            <td class="text-end mono">@(historyBill.BillAmount.HasValue ? historyBill.BillAmount.Value.ToString("N0") : "-")</td>
+                                                            <td class="text-center">
+                                                                @if (historyBill.Paid)
+                                                                {
+                                                                    <span class="badge text-bg-success">是</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge text-bg-secondary">否</span>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</main>
+
+<datalist id="bankCodeList">
+@foreach (var bank in Model.Banks)
+{
+    <option value="@bank.BankCode">@bank.BankName</option>
+}
+</datalist>
+
+<div class="modal fade" id="bankAccountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-soft" style="border-radius: 14px;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bankAccountModalLabel">銀行帳戶</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bankAccountForm" method="post" asp-page="/Index" asp-page-handler="UpsertBankAccount">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <input type="hidden" name="tab" value="bankAccounts" />
+                    <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
+                    <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
+                    <input type="hidden" name="BankAccountForm.Id" id="baId" value="@Model.BankAccountForm.Id" />
+
+                    <div class="mb-3">
+                        <label class="form-label">銀行代碼</label>
+                        <input class="form-control mono"
+                               name="BankAccountForm.BankCode"
+                               id="baBankCode"
+                               maxlength="10"
+                               required
+                               list="bankCodeList"
+                               value="@Model.BankAccountForm.BankCode"
+                               placeholder="例如 812" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">帳戶名稱</label>
+                        <input class="form-control" name="BankAccountForm.AccountName" id="baAccountName" required value="@Model.BankAccountForm.AccountName" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">帳戶類型</label>
+                        <select class="form-select" name="BankAccountForm.AccountType" id="baAccountType" required>
+                            <option value="digital">數位帳戶</option>
+                            <option value="physical">實體帳戶</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">餘額 可空白</label>
+                        <input class="form-control mono" name="BankAccountForm.Balance" id="baBalance" inputmode="decimal" value="@Model.BankAccountForm.Balance" />
+                        <div class="muted small mt-1">留空代表不更新餘額 只更新其他欄位</div>
+                    </div>
+
+                    <div class="impact-box d-none" id="baImpactBox">
+                        <div class="fw-semibold mb-1">待扣影響提示</div>
+                        <div class="mb-2" id="baImpactSummary"></div>
+                        <ul class="impact-detail-list" id="baImpactDetails"></ul>
+                    </div>
+
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" name="BankAccountForm.Enabled" value="true" id="baEnabled" />
+                        <label class="form-check-label" for="baEnabled">啟用</label>
+                    </div>
+
+                    <div id="baDisableWarning" class="alert alert-warning py-2 mt-2 mb-0 d-none">
+                        停用此帳戶會自動解除所有信用卡對它的自動扣款設定
+                    </div>
+
+                    <div id="baError" class="alert alert-danger mt-3 mb-0 d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary" id="baSubmitBtn">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="creditSettingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-soft" style="border-radius: 14px;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="creditSettingModalLabel">信用卡設定</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="creditSettingForm" method="post" asp-page="/Index" asp-page-handler="UpsertCreditSetting">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <input type="hidden" name="tab" value="creditSettings" />
+                    <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
+                    <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
+                    <input type="hidden" name="CreditSettingForm.Id" id="csId" value="@Model.CreditSettingForm.Id" />
+
+                    <div class="mb-3">
+                        <label class="form-label">銀行代碼</label>
+                        <input class="form-control mono"
+                               name="CreditSettingForm.BankCode"
+                               id="csBankCode"
+                               maxlength="10"
+                               required
+                               list="bankCodeList"
+                               value="@Model.CreditSettingForm.BankCode"
+                               placeholder="例如 812" />
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">結帳日 1-31</label>
+                            <input class="form-control mono" type="number" name="CreditSettingForm.StatementDay" id="csStatementDay" min="1" max="31" required value="@Model.CreditSettingForm.StatementDay" />
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">繳費日 1-31</label>
+                            <input class="form-control mono" type="number" name="CreditSettingForm.PaymentDueDay" id="csPaymentDueDay" min="1" max="31" required value="@Model.CreditSettingForm.PaymentDueDay" />
+                        </div>
+                        <div class="col-12 mb-3">
+                            <div class="form-text">若選擇的日期在當月不存在（如 2 月選 30、31），系統會於當月最後一天處理</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">扣款帳戶 可空白</label>
+                        <select class="form-select" name="CreditSettingForm.PaymentBankAccountId" id="csPaymentAccountId">
+                            <option value="">未設定</option>
+                            @foreach (var opt in Model.PaymentAccountOptions)
+                            {
+                                <option value="@opt.Id">@opt.DisplayName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="CreditSettingForm.Enabled" value="true" id="csEnabled" />
+                        <label class="form-check-label" for="csEnabled">啟用</label>
+                    </div>
+
+                    <div id="csError" class="alert alert-danger mt-3 mb-0 d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="billAmountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-soft" style="border-radius: 14px;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="billAmountModalLabel">修改帳單金額</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="billAmountForm" method="post" asp-page="/Index" asp-page-handler="UpdateBillAmount">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <input type="hidden" name="tab" value="currentBills" />
+                    <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
+                    <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
+                    <input type="hidden" name="CurrentBillAmountForm.BillId" id="cbBillId" value="@Model.CurrentBillAmountForm.BillId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">帳單金額</label>
+                        <input class="form-control mono"
+                               type="number"
+                               name="CurrentBillAmountForm.BillAmount"
+                               id="cbBillAmount"
+                               min="0"
+                               required
+                               value="@Model.CurrentBillAmountForm.BillAmount" />
+                        <div class="muted small mt-1">只會修改金額 其他欄位不變</div>
+                    </div>
+
+                    <div id="cbError" class="alert alert-danger mt-3 mb-0 d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(() =>
+{
+    const impactData = @Html.Raw(impactJson);
+    const historyMonthMap = @Html.Raw(historyMonthMapJson);
+
+    const historyYearSelect = document.getElementById("historyYearSelect");
+    const historyMonthSelect = document.getElementById("historyMonthSelect");
+
+    function getMonthListByYear(yearText)
+    {
+        const fromMap = historyMonthMap?.[yearText];
+
+        if (Array.isArray(fromMap) && fromMap.length > 0)
+        {
+            return fromMap.map(Number).sort((a, b) => b - a);
+        }
+
+        return [];
+    }
+
+    function renderHistoryMonths(selectedMonthText)
+    {
+        if (!historyYearSelect || !historyMonthSelect)
+        {
+            return;
+        }
+
+        const monthList = getMonthListByYear(historyYearSelect.value);
+        historyMonthSelect.innerHTML = "";
+
+        monthList.forEach(month =>
+        {
+            const option = document.createElement("option");
+            option.value = String(month);
+            option.textContent = String(month).padStart(2, "0");
+            historyMonthSelect.appendChild(option);
+        });
+
+        if (!selectedMonthText)
+        {
+            if (historyMonthSelect.options.length > 0)
+            {
+                historyMonthSelect.selectedIndex = 0;
+            }
+
+            return;
+        }
+
+        const targetValue = String(Number(selectedMonthText));
+        const targetOption = Array.from(historyMonthSelect.options).find(x => x.value === targetValue);
+
+        if (targetOption)
+        {
+            historyMonthSelect.value = targetOption.value;
+        }
+        else if (historyMonthSelect.options.length > 0)
+        {
+            historyMonthSelect.selectedIndex = 0;
+        }
+    }
+
+    const initialHistoryMonth = historyMonthSelect?.value ?? "";
+    renderHistoryMonths(initialHistoryMonth);
+    historyYearSelect?.addEventListener("change", () => renderHistoryMonths(null));
+
+    const bankModalEl = document.getElementById("bankAccountModal");
+    const btnAddBank = document.getElementById("btnAddBankAccount");
+    const baTitle = document.getElementById("bankAccountModalLabel");
+    const baId = document.getElementById("baId");
+    const baBankCode = document.getElementById("baBankCode");
+    const baAccountName = document.getElementById("baAccountName");
+    const baAccountType = document.getElementById("baAccountType");
+    const baBalance = document.getElementById("baBalance");
+    const baEnabled = document.getElementById("baEnabled");
+    const baDisableWarning = document.getElementById("baDisableWarning");
+    const baSubmitBtn = document.getElementById("baSubmitBtn");
+    const baImpactBox = document.getElementById("baImpactBox");
+    const baImpactSummary = document.getElementById("baImpactSummary");
+    const baImpactDetails = document.getElementById("baImpactDetails");
+
+    function renderImpact(accountId)
+    {
+        if (!baImpactBox || !baImpactSummary || !baImpactDetails)
+        {
+            return;
+        }
+
+        baImpactSummary.textContent = "";
+        baImpactDetails.innerHTML = "";
+
+        const impact = impactData.find(x =>
+        {
+            const id = x.bankAccountId ?? x.BankAccountId;
+            return typeof id === "string" && id.toLowerCase() === String(accountId).toLowerCase();
+        });
+
+        if (!impact)
+        {
+            baImpactBox.classList.add("d-none");
+            return;
+        }
+
+        const details = impact.details ?? impact.Details ?? [];
+        const confirmedTotalAmount = impact.confirmedTotalAmount ?? impact.ConfirmedTotalAmount ?? 0;
+        const unconfirmedCount = impact.unconfirmedCount ?? impact.UnconfirmedCount ?? 0;
+        baImpactSummary.textContent = `已確認待扣總額 ${Number(confirmedTotalAmount).toLocaleString()} 元  未確認帳單 ${Number(unconfirmedCount)} 筆`;
+
+        details.forEach(item =>
+        {
+            const li = document.createElement("li");
+            const bankCode = item.bankCode ?? item.BankCode ?? "";
+            const bankName = item.bankName ?? item.BankName ?? "";
+            const billYear = Number(item.billYear ?? item.BillYear ?? 0);
+            const billMonth = Number(item.billMonth ?? item.BillMonth ?? 0);
+            const paymentDueDay = Number(item.paymentDueDay ?? item.PaymentDueDay ?? 0);
+            const billAmount = item.billAmount ?? item.BillAmount;
+            const amountConfirmed = item.amountConfirmed ?? item.AmountConfirmed;
+            const bankText = bankName ? `${bankCode} ${bankName}` : bankCode;
+            const amountText = amountConfirmed && billAmount !== null && billAmount !== undefined
+                ? `${Number(billAmount).toLocaleString()} 元`
+                : "未確認";
+            li.textContent = `${bankText} | ${billYear}/${String(billMonth).padStart(2, "0")} | ${amountText} | 繳費日 ${String(billMonth).padStart(2, "0")}/${String(paymentDueDay).padStart(2, "0")}`;
+            baImpactDetails.appendChild(li);
+        });
+
+        baImpactBox.classList.remove("d-none");
+    }
+
+    // 記錄目前編輯中的帳戶原本啟用狀態 用於判斷是否顯示停用警告
+    let editingBankEnabledBefore = false;
+
+    // 同步停用警告與儲存按鈕文字 僅在原本啟用但目前取消勾選時提示
+    function syncBankDisableWarning()
+    {
+        if (!baDisableWarning || !baSubmitBtn) return;
+
+        const shouldWarn = editingBankEnabledBefore && !baEnabled.checked;
+
+        if (shouldWarn)
+        {
+            baDisableWarning.classList.remove("d-none");
+            baSubmitBtn.textContent = "確認停用";
+            baSubmitBtn.classList.remove("btn-primary");
+            baSubmitBtn.classList.add("btn-warning");
+        }
+        else
+        {
+            baDisableWarning.classList.add("d-none");
+            baSubmitBtn.textContent = "儲存";
+            baSubmitBtn.classList.remove("btn-warning");
+            baSubmitBtn.classList.add("btn-primary");
+        }
+    }
+
+    baEnabled?.addEventListener("change", syncBankDisableWarning);
+
+    btnAddBank?.addEventListener("click", () =>
+    {
+        baTitle.textContent = "新增銀行帳戶";
+        baId.value = "";
+        baBankCode.value = "";
+        baAccountName.value = "";
+        baAccountType.value = "digital";
+        baBalance.value = "";
+        baEnabled.checked = true;
+        baImpactBox?.classList.add("d-none");
+        editingBankEnabledBefore = false;
+        syncBankDisableWarning();
+    });
+
+    bankModalEl?.addEventListener("show.bs.modal", event =>
+    {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+
+        const id = trigger.getAttribute("data-id");
+        if (!id)
+        {
+            return;
+        }
+
+        baTitle.textContent = "編輯銀行帳戶";
+        baId.value = id;
+        baBankCode.value = trigger.getAttribute("data-bankcode") ?? "";
+        baAccountName.value = trigger.getAttribute("data-accountname") ?? "";
+        baAccountType.value = trigger.getAttribute("data-accounttype") ?? "digital";
+        baBalance.value = "";
+        const enabledText = trigger.getAttribute("data-enabled") ?? "true";
+        const wasEnabled = enabledText === "True" || enabledText === "true";
+        baEnabled.checked = wasEnabled;
+        editingBankEnabledBefore = wasEnabled;
+        syncBankDisableWarning();
+        renderImpact(id);
+    });
+
+    const csModalEl = document.getElementById("creditSettingModal");
+    const btnAddCs = document.getElementById("btnAddCreditSetting");
+    const csTitle = document.getElementById("creditSettingModalLabel");
+    const csId = document.getElementById("csId");
+    const csBankCode = document.getElementById("csBankCode");
+    const csStatementDay = document.getElementById("csStatementDay");
+    const csPaymentDueDay = document.getElementById("csPaymentDueDay");
+    const csPaymentAccountId = document.getElementById("csPaymentAccountId");
+    const csEnabled = document.getElementById("csEnabled");
+
+    btnAddCs?.addEventListener("click", () =>
+    {
+        csTitle.textContent = "新增信用卡設定";
+        csId.value = "";
+        csBankCode.value = "";
+        csStatementDay.value = "1";
+        csPaymentDueDay.value = "1";
+        csPaymentAccountId.value = "";
+        csEnabled.checked = true;
+    });
+
+    csModalEl?.addEventListener("show.bs.modal", event =>
+    {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+
+        const id = trigger.getAttribute("data-id");
+        if (!id)
+        {
+            return;
+        }
+
+        csTitle.textContent = "編輯信用卡設定";
+        csId.value = id;
+        csBankCode.value = trigger.getAttribute("data-bankcode") ?? "";
+        csStatementDay.value = trigger.getAttribute("data-statementday") ?? "1";
+        csPaymentDueDay.value = trigger.getAttribute("data-paymentdueday") ?? "1";
+        csPaymentAccountId.value = trigger.getAttribute("data-paymentaccountid") ?? "";
+        const enabledText = trigger.getAttribute("data-enabled") ?? "true";
+        csEnabled.checked = enabledText === "True" || enabledText === "true";
+    });
+
+    const billAmountModalEl = document.getElementById("billAmountModal");
+    const cbBillId = document.getElementById("cbBillId");
+    const cbBillAmount = document.getElementById("cbBillAmount");
+    const cbError = document.getElementById("cbError");
+
+    billAmountModalEl?.addEventListener("show.bs.modal", event =>
+    {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+
+        const billId = trigger.getAttribute("data-billid");
+        const billAmount = trigger.getAttribute("data-billamount");
+
+        cbBillId.value = billId ?? "";
+        cbBillAmount.value = billAmount ?? "0";
+        if (cbError)
+        {
+            cbError.classList.add("d-none");
+            cbError.textContent = "";
+        }
+    });
+
+    const showError = (el, msg) =>
+    {
+        if (!el) return;
+        el.textContent = msg || "儲存失敗";
+        el.classList.remove("d-none");
+    };
+
+    const clearError = el =>
+    {
+        if (!el) return;
+        el.textContent = "";
+        el.classList.add("d-none");
+    };
+
+    async function ajaxSubmit(formEl, errorEl, modalEl)
+    {
+        clearError(errorEl);
+        const submitBtn = formEl.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+
+        try
+        {
+            const formData = new FormData(formEl);
+            const res = await fetch(formEl.action || window.location.href,
+            {
+                method: "POST",
+                body: formData,
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                credentials: "same-origin"
+            });
+
+            const data = await res.json().catch(() => null);
+            if (!res.ok || !data?.ok)
+            {
+                showError(errorEl, data?.message || `儲存失敗 ${res.status}`);
+                return;
+            }
+
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.hide();
+            window.location.reload();
+        }
+        catch
+        {
+            showError(errorEl, "儲存失敗 請確認網路連線");
+        }
+        finally
+        {
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    }
+
+    const bankForm = document.getElementById("bankAccountForm");
+    const baError = document.getElementById("baError");
+    bankForm?.addEventListener("submit", e =>
+    {
+        e.preventDefault();
+        ajaxSubmit(bankForm, baError, bankModalEl);
+    });
+
+    const csForm = document.getElementById("creditSettingForm");
+    const csError = document.getElementById("csError");
+    csForm?.addEventListener("submit", e =>
+    {
+        e.preventDefault();
+        ajaxSubmit(csForm, csError, csModalEl);
+    });
+
+    const billAmountForm = document.getElementById("billAmountForm");
+    billAmountForm?.addEventListener("submit", e =>
+    {
+        e.preventDefault();
+        ajaxSubmit(billAmountForm, cbError, billAmountModalEl);
+    });
+})();
+</script>
+</body>
+</html>

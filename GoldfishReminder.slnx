@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="GoldfishReminder.Api/GoldfishReminder.Api.csproj" />
+  <Project Path="GoldfishReminder.Application/GoldfishReminder.Application.csproj" />
+  <Project Path="GoldfishReminder.Domain/GoldfishReminder.Domain.csproj" />
+  <Project Path="GoldfishReminder.Infrastructure/GoldfishReminder.Infrastructure.csproj" />
+</Solution>

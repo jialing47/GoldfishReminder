@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>8b3b4a06-5dbd-459c-8ff5-c2774ee1686b</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Discord\Handlers\**" />
+    <Content Remove="Discord\Handlers\**" />
+    <EmbeddedResource Remove="Discord\Handlers\**" />
+    <None Remove="Discord\Handlers\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+  	<PackageReference Include="NSec.Cryptography" Version="25.4.0" />
+  	<PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GoldfishReminder.Application\GoldfishReminder.Application.csproj" />
+    <ProjectReference Include="..\GoldfishReminder.Domain\GoldfishReminder.Domain.csproj" />
+    <ProjectReference Include="..\GoldfishReminder.Infrastructure\GoldfishReminder.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

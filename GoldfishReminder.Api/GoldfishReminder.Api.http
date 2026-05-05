@@ -1,0 +1,6 @@
+@GoldfishReminder.Api_HostAddress = http://localhost:5027
+
+GET {{GoldfishReminder.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
