@@ -1,6 +1,8 @@
 ﻿using GoldfishReminder.Application.Models;
 using GoldfishReminder.Domain.Entities;
 
+namespace GoldfishReminder.Application.Workflows;
+
 // CreditBillWorkflow 的私有 helper 與內部型別拆檔 邏輯完全不變
 public partial class CreditBillWorkflow
 {

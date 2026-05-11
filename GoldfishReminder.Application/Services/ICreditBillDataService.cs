@@ -1,6 +1,8 @@
 ﻿using GoldfishReminder.Application.Models;
 using GoldfishReminder.Domain.Entities;
 
+namespace GoldfishReminder.Application.Services;
+
 // 信用卡帳單流程查詢服務介面
 public interface ICreditBillDataService
 {

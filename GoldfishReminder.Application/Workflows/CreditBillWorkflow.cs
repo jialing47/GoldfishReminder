@@ -1,9 +1,9 @@
-﻿using GoldfishReminder.Application;
-using GoldfishReminder.Application.Models;
+﻿using GoldfishReminder.Application.Models;
 using GoldfishReminder.Application.Services;
 using GoldfishReminder.Domain.Entities;
-using GoldfishReminder.Application.Workflows;
 using Microsoft.Extensions.Logging;
+
+namespace GoldfishReminder.Application.Workflows;
 
 // 信用卡帳單流程
 public partial class CreditBillWorkflow

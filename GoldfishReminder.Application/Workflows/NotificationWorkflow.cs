@@ -1,8 +1,8 @@
-﻿using GoldfishReminder.Application;
-using GoldfishReminder.Application.Models;
+﻿using GoldfishReminder.Application.Models;
 using GoldfishReminder.Application.Services;
-using GoldfishReminder.Application.Workflows;
 using GoldfishReminder.Domain.Entities;
+
+namespace GoldfishReminder.Application.Workflows;
 
 // 通知流程
 public class NotificationWorkflow

@@ -1,4 +1,6 @@
-﻿public class WebLinkToken
+﻿namespace GoldfishReminder.Domain.Entities;
+
+public class WebLinkToken
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
