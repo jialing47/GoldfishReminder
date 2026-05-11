@@ -1,0 +1,97 @@
+﻿/* GoldfishReminder 共用 brand 樣式
+   :root 變數 / 全站基礎 / nav / brand / footer / a11y 行為
+   page-specific 樣式仍留在各自 cshtml 的 <style> 內 */
+
+:root {
+    --ink: #FAF1E0; --ink-text: #2A1A0E;
+    --bg: #FBF6EB; --bg-card: #FFFFFF; --border: #ECDFC3;
+    --gold: #B85423; --gold-dark: #957017; --gold-light: #E68B53; --gold-bg: #FBEBD6;
+    --tan: #5A3A24; --muted-color: #483527;
+    --footer-bg: #2E1A0A; --footer-text: #D9C5A8;
+}
+
+/* === 全站基礎 === */
+* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+html { scroll-padding-top: 80px; scroll-behavior: smooth; }                 /* 錨點捲動避開 nav 高度 */
+html, body { font-family: 'Noto Sans TC', system-ui, sans-serif; background: var(--bg); color: var(--ink-text); overflow-x: hidden; }
+
+/* === Skip link 鍵盤跳至主要內容 === */
+.skip-link { position: absolute; top: -40px; left: 8px; background: var(--gold); color: #fff; padding: 8px 16px; border-radius: 4px; z-index: 9999; text-decoration: none; font-weight: 600; }
+.skip-link:focus { top: 8px; }
+
+/* === Nav + brand === */
+.gf-nav { background: var(--ink); padding: 14px 0; border-bottom: 1px solid var(--border); }
+.gf-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.gf-brand img {
+    width: 2.5rem; height: 2.5rem;                                          /* 老瀏覽器 fallback 靜態 40px */
+    width: clamp(2rem, 1.5rem + 1.333vw, 2.5rem);                           /* 現代瀏覽器 viewport 600px 32px → 1200px 40px 連續變化 */
+    height: clamp(2rem, 1.5rem + 1.333vw, 2.5rem);
+    object-fit: contain;
+}
+.gf-brand-zh { font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 17px; color: var(--ink-text); letter-spacing: .04em; line-height: 1.1; }
+.gf-brand-en { color: var(--tan); font-size: 9.5px; letter-spacing: .35em; line-height: 1.1; }
+
+/* === Footer === */
+.gf-footer { background: var(--footer-bg); color: var(--footer-text); padding: 40px 0; font-size: 12.5px; border-top: 1px solid var(--border); }
+.gf-footer a { color: var(--gold-light); text-decoration: none; font-weight: 500; }
+.gf-footer a:hover { color: #fff; }
+.gf-footer-brand { color: var(--gold-light); font-family: 'Noto Serif TC', serif; font-weight: 700; margin-right: 8px; }
+.gf-footer-copy { white-space: nowrap; }                                    /* 防版權整行在窄螢幕被斷行 */
+
+/* === Footer 鍵盤聚焦樣式 === */
+/* 舊瀏覽器 ( :focus-visible 不支援 ) 會落到第一條 click 與鍵盤都顯示 outline */
+/* 現代瀏覽器第二條會在點擊時抑制 outline 只在鍵盤聚焦顯示 */
+.gf-footer a:focus {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+.gf-footer a:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* === Doc page (Privacy / Terms) 共用樣式 === */
+.gf-doc-container { max-width: 1040px; }                                    /* 拉寬閱讀區 減少左右空白感 */
+.gf-page-header { background: linear-gradient(180deg, var(--ink) 0%, var(--bg) 100%); padding: 64px 0 48px; }
+.gf-eb { color: var(--gold); font-size: 11px; letter-spacing: .4em; font-weight: 600; margin-bottom: 14px; text-transform: uppercase; }
+.gf-page-title { font-family: 'Noto Serif TC', serif; font-size: 44px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 14px; }
+.gf-page-sub { color: var(--muted-color); font-size: 15px; line-height: 1.7; max-width: 640px; margin: 0; }
+.gf-doc { padding: 56px 0 80px; }
+.gf-doc-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 48px 48px; box-shadow: 0 12px 40px rgba(20,30,50,.04); }
+.gf-doc p { color: var(--muted-color); font-size: 15px; line-height: 1.85; margin: 0 0 16px; }
+.gf-doc-intro { background: var(--gold-bg); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 12px; padding: 20px 24px; margin-bottom: 40px; }
+.gf-doc-intro p { margin: 0; color: var(--tan); font-size: 14px; }
+.gf-section { border-top: 1px solid var(--border); margin-top: 36px; padding-top: 32px; display: grid; grid-template-columns: 100px 1fr; gap: 28px; }
+.gf-section:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+.gf-section-num { font-family: 'Noto Serif TC', serif; font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: .15em; padding-top: 6px; }
+.gf-section h2 { font-family: 'Noto Serif TC', serif; font-size: 22px; font-weight: 600; margin: 0 0 14px; color: var(--ink-text); }
+.gf-back { display: inline-flex; align-items: center; gap: 6px; color: var(--gold); font-size: 13px; font-weight: 500; text-decoration: none; margin-bottom: 24px; }
+.gf-back:hover { color: var(--ink-text); }
+
+/* === 返回鍵盤聚焦樣式 === */
+.gf-back:focus {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+.gf-back:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* === Doc page mobile 響應式 === */
+@media (max-width: 768px) {
+    .gf-doc-card { padding: 32px 24px; }
+    .gf-section { grid-template-columns: 1fr; gap: 8px; }
+    .gf-page-title { font-size: 32px; }
+}
+
+/* === 偏好減少動作的使用者關閉平滑捲動 === */
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+}
+
+/* === Flex gap fallback 舊 Safari < 14.1 不支援 flex gap 用 margin 模擬 === */
+/* 現代瀏覽器看得懂 @supports 第二段會將 margin 清除 改用原本的 gap */
+@supports not (gap: 1px) {
+    .gf-brand > * + * { margin-left: 12px; }
+    .gf-back > * + * { margin-left: 6px; }
+}
+

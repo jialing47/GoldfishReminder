@@ -1,71 +1,161 @@
 ﻿@page
 @model GoldfishReminder.Api.Pages.PrivacyModel
 @{
+    Layout = null;
     ViewData["Title"] = "隱私權政策";
 }
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>隱私權政策 — 金魚腦助手</title>
+    <meta name="description" content="金魚腦助手隱私權政策 說明蒐集的資料種類 使用方式 與您的權利" />
+    <meta name="theme-color" content="#B85423" />
+    <link rel="icon" type="image/png" sizes="32x32" href="~/favicon-32.png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/brand.css" asp-append-version="true" />
+    <style>
+        /* 只有 Privacy 用到的清單樣式 其餘 doc page 樣式在 brand.css */
+        .gf-doc ul { color: var(--muted-color); font-size: 15px; line-height: 1.9; padding-left: 0; list-style: none; margin: 8px 0 20px; }
+        .gf-doc ul li { position: relative; padding-left: 22px; margin-bottom: 6px; }
+        .gf-doc ul li::before { content: ''; position: absolute; left: 4px; top: 14px; width: 6px; height: 6px; border-radius: 50%; background: var(--gold-light); }
+    </style>
+</head>
+<body>
+<a href="#main" class="skip-link">跳至主要內容</a>
 
-<div class="container py-4" style="max-width: 900px;">
-    <h1 class="mb-4">隱私權政策</h1>
+<nav class="gf-nav">
+    <div class="container">
+        <a class="gf-brand" href="/">
+            <img src="~/logo.png" alt="金魚腦助手" />
+            <div>
+                <div class="gf-brand-zh">金魚腦助手</div>
+                <div class="gf-brand-en">GOLDFISH REMINDER</div>
+            </div>
+        </a>
+    </div>
+</nav>
 
-    <p>
-        本隱私權政策說明 金魚腦助手 GoldfishReminder 如何蒐集、使用、保存與保護您使用本服務時所提供或產生的資料。
-    </p>
+<header class="gf-page-header">
+    <div class="container gf-doc-container">
+        <a href="/" class="gf-back">← 回首頁</a>
+        <div class="gf-eb">PRIVACY POLICY</div>
+        <h1 class="gf-page-title">隱私權政策</h1>
+        <p class="gf-page-sub">本政策說明金魚腦助手如何蒐集、使用、保存與保護您使用本服務時所提供或產生的資料。</p>
+    </div>
+</header>
 
-    <h2 class="h4 mt-4">一、我們蒐集的資料</h2>
-    <p>我們可能蒐集以下資料：</p>
-    <ul>
-        <li>Discord 相關資料，例如 Discord 使用者 ID、顯示名稱、私人頻道 ID 與必要互動資料。</li>
-        <li>使用者自行輸入之資料，例如銀行帳戶設定、信用卡設定、帳單資訊、提醒設定與相關狀態資料。</li>
-        <li>系統運作所需資料，例如一次性網頁連結 token、通知紀錄、錯誤紀錄與基本技術資訊。</li>
-    </ul>
+<main id="main" class="gf-doc">
+    <div class="container gf-doc-container">
+        <div class="gf-doc-card">
+            <div class="gf-doc-intro">
+                <p>本服務不會直接自任何銀行、信用卡公司或其他金融機構取得您的金融資料；所有帳戶、信用卡與帳單資訊皆由您自行輸入。</p>
+            </div>
 
-    <h2 class="h4 mt-4">二、金融資料來源聲明</h2>
-    <p>
-        本服務不會直接自任何銀行、信用卡公司或其他金融機構取得您的金融資料。
-        本服務處理之帳戶、信用卡、帳單與提醒相關資訊，原則上均來自使用者自行輸入、修改或提供之內容，
-        並僅用於執行本服務之整理、計算、判斷與提醒功能。
-    </p>
+            <section class="gf-section">
+                <div class="gf-section-num">一</div>
+                <div>
+                    <h2>我們蒐集的資料</h2>
+                    <p>我們可能蒐集以下資料：</p>
+                    <ul>
+                        <li>Discord 相關資料，例如 Discord 使用者 ID、顯示名稱、私人頻道 ID 與必要互動資料。</li>
+                        <li>使用者自行輸入之資料，例如銀行帳戶設定、信用卡設定、帳單資訊、提醒設定與相關狀態資料。</li>
+                        <li>系統運作所需資料，例如一次性網頁連結 token、通知紀錄、錯誤紀錄與基本技術資訊。</li>
+                        <li>必要 Cookie，例如登入狀態識別碼，僅用於維持您於設定頁面的登入狀態，不用於追蹤分析或第三方廣告。</li>
+                    </ul>
+                </div>
+            </section>
 
-    <h2 class="h4 mt-4">三、資料使用目的</h2>
-    <p>我們使用上述資料，以提供以下功能：</p>
-    <ul>
-        <li>建立與辨識使用者</li>
-        <li>建立、確認或重建私人 Discord 頻道</li>
-        <li>發送網頁連結、提醒與通知</li>
-        <li>提供帳戶、信用卡、帳單與提醒管理功能</li>
-        <li>維護服務安全、穩定與除錯需求</li>
-    </ul>
+            <section class="gf-section">
+                <div class="gf-section-num">二</div>
+                <div>
+                    <h2>金融資料來源聲明</h2>
+                    <p>本服務不會直接自任何銀行、信用卡公司或其他金融機構取得您的金融資料。本服務處理之帳戶、信用卡、帳單與提醒相關資訊，原則上均來自使用者自行輸入、修改或提供之內容，並僅用於執行本服務之整理、計算、判斷與提醒功能。</p>
+                </div>
+            </section>
 
-    <h2 class="h4 mt-4">四、資料保存</h2>
-    <p>
-        我們僅於提供服務、維護系統、安全管理與符合法律要求所必要之期間內保存您的資料。
-        若您要求刪除資料，且無法律上必須保存之理由，我們將於合理期間內處理。
-    </p>
+            <section class="gf-section">
+                <div class="gf-section-num">三</div>
+                <div>
+                    <h2>資料使用目的</h2>
+                    <p>我們使用上述資料，以提供以下功能：</p>
+                    <ul>
+                        <li>建立與辨識使用者</li>
+                        <li>建立、確認或重建私人 Discord 頻道</li>
+                        <li>發送網頁連結、提醒與通知</li>
+                        <li>提供帳戶、信用卡、帳單與提醒管理功能</li>
+                        <li>維護服務安全、穩定與除錯需求</li>
+                    </ul>
+                </div>
+            </section>
 
-    <h2 class="h4 mt-4">五、資料分享</h2>
-    <p>我們不會出售您的個人資料。除下列情況外，我們不會向第三方揭露您的資料：</p>
-    <ul>
-        <li>提供本服務所必要之主機、資料庫或技術服務供應商</li>
-        <li>法律、主管機關或司法程序之要求</li>
-        <li>為保護本服務、其他使用者或公眾之權利與安全</li>
-        <li>經您同意之情況</li>
-    </ul>
+            <section class="gf-section">
+                <div class="gf-section-num">四</div>
+                <div>
+                    <h2>資料保存</h2>
+                    <p>我們僅於提供服務、維護系統、安全管理與符合法律要求所必要之期間內保存您的資料。若您要求刪除資料，且無法律上必須保存之理由，我們將於合理期間內處理。</p>
+                </div>
+            </section>
 
-    <h2 class="h4 mt-4">六、資料安全</h2>
-    <p>
-        我們會採取合理措施保護您的資料，避免未經授權之存取、洩漏、竄改或毀損。
-        但任何網路傳輸或儲存方式均無法保證絕對安全。
-    </p>
+            <section class="gf-section">
+                <div class="gf-section-num">五</div>
+                <div>
+                    <h2>資料分享</h2>
+                    <p>我們不會出售您的個人資料。除下列情況外，我們不會向第三方揭露您的資料：</p>
+                    <ul>
+                        <li>提供本服務所必要之主機、資料庫或技術服務供應商</li>
+                        <li>法律、主管機關或司法程序之要求</li>
+                        <li>為保護本服務、其他使用者或公眾之權利與安全</li>
+                        <li>經您同意之情況</li>
+                    </ul>
+                </div>
+            </section>
 
-    <h2 class="h4 mt-4">七、您的權利</h2>
-    <p>
-        若您對本隱私權政策或資料處理有任何問題，可透過本服務官方公告管道與我們聯絡。
-    </p>
+            <section class="gf-section">
+                <div class="gf-section-num">六</div>
+                <div>
+                    <h2>資料安全</h2>
+                    <p>我們會採取合理措施保護您的資料，避免未經授權之存取、洩漏、竄改或毀損。但任何網路傳輸或儲存方式均無法保證絕對安全。</p>
+                </div>
+            </section>
 
-    <h2 class="h4 mt-4">八、政策修改</h2>
-    <p>
-        我們得隨時修改本隱私權政策。修改後版本公布於本服務網站後即生效。
-        您於修改後繼續使用本服務，即視為同意更新後內容。
-    </p>
+            <section class="gf-section">
+                <div class="gf-section-num">七</div>
+                <div>
+                    <h2>您的權利</h2>
+                    <p>若您對本隱私權政策或資料處理有任何問題，可透過本服務首頁所提供之聯絡方式與我們聯絡。</p>
+                </div>
+            </section>
 
-</div>
+            <section class="gf-section">
+                <div class="gf-section-num">八</div>
+                <div>
+                    <h2>政策修改</h2>
+                    <p>我們得隨時修改本隱私權政策。修改後版本公布於本服務網站後即生效。您於修改後繼續使用本服務，即視為同意更新後內容。</p>
+                </div>
+            </section>
+
+            <p class="text-end" style="margin-top: 32px; color: var(--muted-color); font-size: 12px;">最後更新：2026 年 5 月 8 日</p>
+        </div>
+    </div>
+</main>
+
+<footer class="gf-footer">
+    <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <span class="gf-footer-brand">金魚腦助手</span>
+            <span class="gf-footer-copy">© @DateTime.Now.Year GoldfishReminder · All rights reserved.</span>
+        </div>
+        <div class="d-flex gap-4">
+            <a asp-page="/Privacy">隱私權政策</a>
+            <a asp-page="/Terms">服務條款</a>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

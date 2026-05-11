@@ -245,7 +245,11 @@ public class DiscordInteractionsController : ControllerBase
             }
 
             var accounts = await creditBillDataService.GetUserAccountsAsync(user.Id, cancellationToken);
-            var focusedValue = request.Data.GetOptionValue(BalanceAccountOptionName, focusedOnly: true) ?? string.Empty;
+            var focusedValue = request.Data.GetOptionValue(BalanceAccountOptionName, focusedOnly: true);
+            if (focusedValue == null)
+            {
+                focusedValue = string.Empty;
+            }
             var filtered = FilterAccounts(accounts, focusedValue);
 
             return Ok(BuildAutocompleteResponse(filtered));
@@ -377,13 +381,19 @@ public class DiscordInteractionsController : ControllerBase
     // 建立 workflow 回覆
     private static object BuildWorkflowResponse(WorkflowAction action)
     {
+        var components = action.Components;
+        if (components == null)
+        {
+            components = Array.Empty<object>();
+        }
+
         return new
         {
             type = 4,
             data = new
             {
                 content = action.Message,
-                components = action.Components ?? Array.Empty<object>()
+                components = components
             }
         };
     }

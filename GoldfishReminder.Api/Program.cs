@@ -62,12 +62,19 @@ builder.Services.AddHostedService<TaskQueueHostedService>();
 
 var app = builder.Build();
 
-// 開發環境才開 Swagger
+// production 用自訂 Error 頁 dev 用內建詳細頁
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();
 }
+else
+{
+    app.UseExceptionHandler("/Error");
+}
+// 非 2xx 狀態碼 例如 404 405 重新導到 /Error/{statusCode}
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
 
 app.UseHttpsRedirection();
 

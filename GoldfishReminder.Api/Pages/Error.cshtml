@@ -1,0 +1,89 @@
+﻿@page "{code:int?}"
+@model GoldfishReminder.Api.Pages.ErrorModel
+@{
+    Layout = null;
+    var pageTitle = Model.IsNotFound ? "找不到頁面" : "發生錯誤";
+}
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>@pageTitle — 金魚腦助手</title>
+    <meta name="theme-color" content="#B85423" />
+    <link rel="icon" type="image/png" sizes="32x32" href="~/favicon-32.png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/brand.css" asp-append-version="true" />
+    <style>
+        .gf-error-wrap { min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 80px 0; }
+        .gf-error-content { max-width: 560px; text-align: center; }
+        .gf-error-code { font-family: 'Noto Serif TC', serif; font-size: 112px; font-weight: 700; color: var(--gold); line-height: 1; margin-bottom: 12px; letter-spacing: -.02em; }
+        .gf-error-title { font-family: 'Noto Serif TC', serif; font-size: 32px; font-weight: 700; color: var(--ink-text); margin-bottom: 14px; }
+        .gf-error-sub { color: var(--muted-color); font-size: 15px; line-height: 1.8; margin-bottom: 32px; }
+        .gf-error-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: #fff; border: 0; border-radius: 10px; padding: 14px 26px; font-weight: 600; font-size: 14px; text-decoration: none; transition: .15s; }
+        .gf-error-cta:hover { background: var(--gold-dark); color: #fff; }
+        .gf-error-cta:focus { outline: 2px solid var(--gold); outline-offset: 2px; }
+        .gf-error-cta:focus:not(:focus-visible) { outline: none; }
+
+        @@media (max-width: 768px) {
+            .gf-error-code { font-size: 80px; }
+            .gf-error-title { font-size: 24px; }
+        }
+
+        @@supports not (gap: 1px) {
+            .gf-error-cta > * + * { margin-left: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="gf-nav">
+    <div class="container">
+        <a class="gf-brand" href="/">
+            <img src="~/logo.png" alt="金魚腦助手" />
+            <div>
+                <div class="gf-brand-zh">金魚腦助手</div>
+                <div class="gf-brand-en">GOLDFISH REMINDER</div>
+            </div>
+        </a>
+    </div>
+</nav>
+
+<main id="main" class="container">
+    <div class="gf-error-wrap">
+        <div class="gf-error-content">
+            <div class="gf-error-code">@Model.StatusCode</div>
+            @if (Model.IsNotFound)
+            {
+                <div class="gf-error-title">這頁被金魚忘掉了</div>
+                <p class="gf-error-sub">您要的網址可能輸入錯誤，或是內容已不存在。<br />金魚最近記性不太好，正在某個地方游走。</p>
+            }
+            else
+            {
+                <div class="gf-error-title">伺服器跌進魚缸了</div>
+                <p class="gf-error-sub">系統暫時出了點狀況，請稍後再試。<br />如果問題持續發生，可以來信告訴我們。</p>
+            }
+            <a href="/" class="gf-error-cta">回首頁</a>
+        </div>
+    </div>
+</main>
+
+<footer class="gf-footer">
+    <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <span class="gf-footer-brand">金魚腦助手</span>
+            <span class="gf-footer-copy">© @DateTime.Now.Year GoldfishReminder · All rights reserved.</span>
+        </div>
+        <div class="d-flex gap-4">
+            <a asp-page="/Privacy">隱私權政策</a>
+            <a asp-page="/Terms">服務條款</a>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
