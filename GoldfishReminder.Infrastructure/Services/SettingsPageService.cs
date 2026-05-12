@@ -118,20 +118,23 @@ public class SettingsPageService : ISettingsPageService
                 x => x.Key,
                 x => x.OrderByDescending(y => y.Enabled).Select(y => y.PaymentBankAccountId).FirstOrDefault());
 
+        // 改用「真正繳款日」判斷是否屬於本月待繳 不再用 BillYear/BillMonth 否則跨月帳單會錯位
         var currentBills = allBills
-            .Where(x => x.BillYear == now.Year && x.BillMonth == now.Month && !x.Paid)
+            .Where(x => !x.Paid)
+            .Select(x => new { Snapshot = x, DueDate = ComputeDueDate(x) })
+            .Where(x => x.DueDate.Year == now.Year && x.DueDate.Month == now.Month)
             .Select(x => new CurrentBillItem
             {
-                Id = x.Id,
-                BankCode = x.BankCode,
-                BankName = bankNameByCode.TryGetValue(x.BankCode, out var bankName) ? bankName : string.Empty,
-                BillYear = x.BillYear,
-                BillMonth = x.BillMonth,
-                PaymentDueDay = x.PaymentDueDay,
-                BillAmount = x.BillAmount,
-                AmountConfirmed = x.AmountConfirmed,
-                Paid = x.Paid,
-                PaymentAccountName = BuildPaymentAccountName(x.BankCode, paymentAccountByBankCode, paymentAccountNameById)
+                Id = x.Snapshot.Id,
+                BankCode = x.Snapshot.BankCode,
+                BankName = bankNameByCode.TryGetValue(x.Snapshot.BankCode, out var bankName) ? bankName : string.Empty,
+                BillYear = x.Snapshot.BillYear,
+                BillMonth = x.Snapshot.BillMonth,
+                PaymentDueDay = x.Snapshot.PaymentDueDay,
+                BillAmount = x.Snapshot.BillAmount,
+                AmountConfirmed = x.Snapshot.AmountConfirmed,
+                Paid = x.Snapshot.Paid,
+                PaymentAccountName = BuildPaymentAccountName(x.Snapshot.BankCode, paymentAccountByBankCode, paymentAccountNameById)
             })
             .OrderBy(x => x.PaymentDueDay)
             .ThenBy(x => x.BankCode)
@@ -161,6 +164,7 @@ public class SettingsPageService : ISettingsPageService
             }
         }
 
+        // 歷史帳單依使用者選擇的 BillYear/BillMonth 篩 並帶 DueDate 給前端判斷三態
         var historyBills = allBills
             .Where(x => x.BillYear == selectedHistoryYear && x.BillMonth == selectedHistoryMonth)
             .Select(x => new HistoryBillItem
@@ -171,7 +175,8 @@ public class SettingsPageService : ISettingsPageService
                 BillYear = x.BillYear,
                 BillMonth = x.BillMonth,
                 BillAmount = x.BillAmount,
-                Paid = x.Paid
+                Paid = x.Paid,
+                DueDate = ComputeDueDate(x)
             })
             .OrderBy(x => x.BankCode)
             .ToList();
@@ -384,6 +389,28 @@ public class SettingsPageService : ISettingsPageService
         public int? BillAmount { get; set; }
         public bool AmountConfirmed { get; set; }
         public bool Paid { get; set; }
+    }
+
+    // 計算真正繳款日 繳款日號小於結帳日號視為跨月 落在帳單月份的下個月
+    // 與 CreditBillWorkflow.Helpers.GetDueDate 邏輯一致
+    private static DateTime ComputeDueDate(BillSnapshot bill)
+    {
+        var year = bill.BillYear;
+        var month = bill.BillMonth;
+
+        if (bill.PaymentDueDay < bill.StatementDay)
+        {
+            month++;
+            if (month > 12)
+            {
+                month = 1;
+                year++;
+            }
+        }
+
+        var daysInMonth = DateTime.DaysInMonth(year, month);
+        var clampedDay = Math.Min(bill.PaymentDueDay, daysInMonth);
+        return new DateTime(year, month, clampedDay);
     }
 
     //帳戶類型顯示文字

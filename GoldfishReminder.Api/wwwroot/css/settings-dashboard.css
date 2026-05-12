@@ -1,0 +1,404 @@
+﻿/* ======================================================== */
+/* === 設定中心 dashboard 樣式                            === */
+/* ======================================================== */
+
+/* === 補強 brand.css 沒定義的變數 === */
+:root {
+    --border-strong: #D8C39C;                                       /* 比 --border 深一階 用於卡片強邊 */
+    --border-light: #E5E0D2;                                        /* 比 --border 淡一階 中性灰 用於白底按鈕邊 */
+    --dash-pending: #B47A1A;                                        /* 待扣金額 暖琥珀 */
+    --dash-success: #2E7D5B;                                        /* 已繳/數位帳戶 */
+    --dash-danger: #A8392A;                                         /* 未設金額紅警 */
+    --dash-warn: #B47A1A;                                           /* 未到繳費日 琥珀 */
+    --dash-row-divider: #F4EFDF;                                    /* 每列底線比 border 淡 */
+}
+
+/* === Dashboard wrapper 統一固定欄寬 銀行 + 操作 === */
+.gf-dash { --col-bank: 200px; --col-action: 80px; }
+
+/* === 訊息提示 取代原本 alert-info shadow-soft === */
+.gf-dash-alert { background: var(--gold-bg); border: 1px solid var(--border-strong); border-left: 3px solid var(--gold); border-radius: 10px; padding: 12px 18px; margin-bottom: 18px; font-size: 13.5px; color: var(--tan); }
+
+/* === 頂部 hero 區 eyebrow + 標題 + 副標 ===== */
+.gf-dash-hero { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.gf-dash-hero-left { display: flex; flex-direction: column; min-width: 0; }
+.gf-dash-eyebrow { color: var(--gold); font-size: 11px; letter-spacing: .22em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+.gf-dash-title { font-family: 'Noto Serif TC', serif; font-size: 32px; font-weight: 700; margin: 0; color: var(--ink-text); letter-spacing: -.005em; line-height: 1.15; }
+.gf-dash-subtitle { color: var(--tan); font-size: 13.5px; margin: 8px 0 0 0; line-height: 1.55; max-width: 520px; }
+.gf-dash-refresh { background: #fff; border: 1px solid var(--border-light); border-radius: 9px; padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--ink-text); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: .12s; white-space: nowrap; margin-top: 4px; }
+.gf-dash-refresh:hover { border-color: var(--gold); color: var(--gold); }
+
+/* === KPI 統計卡片 兩張並排 內部橫排 label 左 value 右 === */
+.gf-dash-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+.gf-dash-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 24px; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.gf-dash-stat__label { color: var(--tan); font-size: 12.5px; letter-spacing: .12em; font-weight: 500; }
+.gf-dash-stat__val { font-family: 'Noto Serif TC', serif; font-size: 28px; font-weight: 700; line-height: 1.1; color: var(--ink-text); font-feature-settings: 'tnum'; }
+
+/* === Tab pill 容器 active 白底深字 === */
+.gf-dash-tabs { display: inline-flex; gap: 3px; background: #EFE9D8; padding: 5px; border-radius: 11px; margin-bottom: 18px; }
+.gf-dash-tab { background: transparent; border: 0; padding: 9px 18px; border-radius: 7px; font-size: 13.5px; font-weight: 500; color: var(--muted-color); font-family: inherit; cursor: pointer; transition: .12s; text-decoration: none; }
+.gf-dash-tab:hover { color: var(--ink-text); }
+.gf-dash-tab.active { background: #fff; color: var(--ink-text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+.gf-dash-tab.active:hover { color: var(--ink-text); }
+
+/* === Panel 4 個 tab 的內容區 === */
+.gf-dash-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 24px 28px; margin-bottom: 16px; }
+.gf-dash-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.gf-dash-panel-title { font-family: 'Noto Serif TC', serif; font-size: 17px; font-weight: 700; margin: 0; color: var(--ink-text); }
+
+/* === + 新增 按鈕 gold 實心 === */
+.gf-dash-add { background: var(--gold); color: #fff; border: 0; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: .12s; white-space: nowrap; }
+.gf-dash-add:hover { background: #A04918; }
+
+/* === Row container 與 row head 各 tab grid template 不同 === */
+.gf-dash-rows { }
+.gf-dash-row-head { color: var(--tan); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; font-weight: 500; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.gf-dash-row-head > div.right { text-align: right; }
+.gf-dash-row { padding: 14px 12px; border-bottom: 1px solid var(--dash-row-divider); align-items: center; }
+.gf-dash-row:last-child { border-bottom: 0; }
+.gf-dash-row > div.right { text-align: right; }
+.gf-dash-row:hover { background: var(--gold-bg); }                  /* 滑過列高亮 對焦目前列 */
+
+/* === Grid template 各 tab 中間欄浮動 兩端錨點固定 === */
+.gf-dash-rows-bank .gf-dash-row-head,
+.gf-dash-rows-bank .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) 1.3fr .9fr 1fr 1fr var(--col-action); gap: 12px; }
+.gf-dash-rows-card .gf-dash-row-head,
+.gf-dash-rows-card .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) 1fr 1fr 1.5fr var(--col-action); gap: 12px; }
+.gf-dash-rows-bill .gf-dash-row-head,
+.gf-dash-rows-bill .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) .9fr 1.2fr 1fr var(--col-action); gap: 12px; }
+.gf-dash-rows-hist .gf-dash-row-head,
+.gf-dash-rows-hist .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) .9fr 1.2fr 1fr; gap: 12px; }
+
+/* === 待繳/歷史 金額 cell 右側預留空白 避免金額右緣與狀態左緣貼太近 === */
+.gf-dash-rows-bill .gf-dash-row-head > div:nth-child(3),
+.gf-dash-rows-bill .gf-dash-row > div:nth-child(3),
+.gf-dash-rows-hist .gf-dash-row-head > div:nth-child(3),
+.gf-dash-rows-hist .gf-dash-row > div:nth-child(3) { padding-right: 32px; }
+
+/* === 銀行 cell 徽章 + 名稱 === */
+.gf-dash-bank { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.gf-dash-bank-mark { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--gold-bg); color: var(--gold); display: flex; align-items: center; justify-content: center; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; font-size: 12px; flex-shrink: 0; }
+.gf-dash-bank-info { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.gf-dash-bank-name { font-size: 13.5px; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gf-dash-bank-acct-row { display: none; }                                      /* 桌面隱藏 帳戶名稱 + 類型 tag 另有專欄顯示 手機才需要在這顯示 */
+.gf-dash-bank-pay-row { display: none; }                                       /* 桌面隱藏 扣款帳戶副標 另有專欄顯示 手機才需要在 bank-info 顯示 */
+
+/* === 帳戶名稱 cell 過長截斷 === */
+.gf-dash-acct-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* === 類型 tag 數位/實體 === */
+.gf-dash-tag { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.gf-dash-tag-digital { background: #E5F3EB; color: var(--dash-success); }
+.gf-dash-tag-physical { background: #F0E5D2; color: var(--tan); }
+
+/* === 狀態 dot 已繳/待繳/未設/未到繳費日 === */
+.gf-dash-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; }
+.gf-dash-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.gf-dash-status-paid { color: var(--dash-success); }
+.gf-dash-status-paid::before { background: var(--dash-success); }
+.gf-dash-status-due { color: var(--gold); }
+.gf-dash-status-due::before { background: var(--gold); }
+.gf-dash-status-danger { color: var(--dash-danger); }
+.gf-dash-status-danger::before { background: var(--dash-danger); }
+.gf-dash-status-warn { color: var(--dash-warn); }
+.gf-dash-status-warn::before { background: var(--dash-warn); }
+
+/* === 金額顯示 主數字 + NT$ 小字 === */
+.gf-dash-amt { font-family: 'Noto Serif TC', serif; font-weight: 700; font-feature-settings: 'tnum'; font-size: 14.5px; }
+.gf-dash-amt .cur { font-size: 11px; font-weight: 400; color: var(--muted-color); margin-right: 2px; }
+.gf-dash-amt-none { color: var(--muted-color); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+.gf-dash-amt-danger { font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 14.5px; color: var(--dash-danger); }
+
+/* === 待扣金額 暖琥珀色 === */
+.gf-dash-pending { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; color: var(--dash-pending); font-weight: 600; }
+.gf-dash-pending .cur { color: var(--muted-color); font-weight: 400; margin-right: 1px; font-size: 11px; }
+
+/* === 結帳/繳費日 mono 數字 === */
+.gf-dash-day { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; font-weight: 500; color: var(--ink-text); }
+
+/* === 自動扣繳/扣款帳戶 === */
+.gf-dash-pay-acct { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gf-dash-pay-acct-warn { font-size: 13px; color: var(--dash-warn); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gf-dash-pay-acct-none { font-size: 13px; color: var(--muted-color); }
+
+/* === 編輯/操作 ghost outline 按鈕 桌面手機 modal 通用一套 === */
+.gf-dash-edit { background: transparent; border: 1px solid var(--border-strong); color: var(--tan); font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; padding: 5px 12px; border-radius: 7px; transition: color .12s, border-color .12s; white-space: nowrap; text-decoration: none; display: inline-block; }
+.gf-dash-edit:hover { color: var(--gold); border-color: var(--gold); text-decoration: none; }
+
+/* === 操作 cell 可同時放多個按鈕 === */
+.gf-dash-actions { display: flex; gap: 4px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+
+/* === 停用 collapse 觸發列 虛線邊 === */
+.gf-dash-collapse-trigger { margin-top: 16px; padding: 10px 14px; border: 1px dashed var(--border-strong); border-radius: 9px; display: flex; justify-content: space-between; align-items: center; color: var(--tan); font-size: 12.5px; cursor: pointer; background: transparent; font-family: inherit; width: 100%; transition: .12s; }
+.gf-dash-collapse-trigger:hover { border-color: var(--gold); color: var(--gold); }
+.gf-dash-collapse-trigger .count { background: #EFE4D4; color: var(--muted-color); padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+
+/* === 歷史 filter 年月 select + 查詢 整合版 outline 風格 === */
+.gf-dash-filter { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.gf-dash-filter input[type="hidden"] { display: none; }
+.gf-dash-filter select { padding: 7px 12px; border: 1px solid #D9CFB8; background: #fff; color: var(--ink-text); border-radius: 8px; font-size: 13px; font-family: inherit; cursor: pointer; transition: .15s; }
+.gf-dash-filter select:hover { border-color: var(--gold); color: var(--gold); }
+.gf-dash-filter select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(230, 139, 83, .18); }
+.gf-dash-filter-unit { font-size: 13px; color: var(--muted-color); margin-right: 6px; }                /* select 後面緊接的 年 月 單位字 */
+.gf-dash-filter-btn { background: #fff; border: 1px solid #D9CFB8; color: var(--ink-text); border-radius: 8px; padding: 7px 18px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: .15s; margin-left: 6px; }
+.gf-dash-filter-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* === 空狀態 取代原本 alert-warning === */
+.gf-dash-empty { padding: 24px 18px; text-align: center; color: var(--muted-color); font-size: 13.5px; background: var(--bg); border: 1px dashed var(--border); border-radius: 10px; }
+
+/* ======================================================== */
+/* === Modal 樣式 拿鐵主題 套在 Bootstrap modal 結構上 === */
+/* ======================================================== */
+
+/* === Bootstrap modal-content 外殼覆寫 用 gf-modal 取代預設 white box === */
+.gf-modal-content { background: var(--bg-card); border-radius: 18px; border: 0; box-shadow: 0 24px 60px -20px rgba(82,42,12,.22), 0 6px 18px -10px rgba(82,42,12,.18); overflow: hidden; }
+
+/* === Modal 標題列 eyebrow + title + sub + 右上 close === */
+.gf-modal-head { padding: 22px 28px 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, #FFFDF7 0%, #FFFFFF 100%); }
+.gf-modal-head-left { flex: 1; min-width: 0; }
+.gf-modal-eyebrow { color: var(--gold); font-family: 'Noto Serif TC', serif; font-size: 10px; letter-spacing: .35em; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+.gf-modal-title { font-family: 'Noto Serif TC', serif; font-size: 20px; font-weight: 700; color: var(--ink-text); margin: 0; }
+.gf-modal-sub { color: var(--muted-color); font-size: 12.5px; margin-top: 4px; line-height: 1.55; }
+.gf-modal-close { background: transparent; border: 0; width: 32px; height: 32px; border-radius: 8px; color: var(--muted-color); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s, color .15s; flex-shrink: 0; padding: 0; }
+.gf-modal-close:hover { background: var(--gold-bg); color: var(--gold); }
+.gf-modal-close svg { width: 16px; height: 16px; }
+
+/* === Modal body 表單區 === */
+.gf-modal-body { padding: 22px 28px 8px; }
+
+/* === Modal footer 按鈕列 === */
+.gf-modal-foot { padding: 16px 28px 22px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid var(--border); background: #FDFAF1; }
+
+/* === 表單欄位通用 包住 label + input + help === */
+.gf-field { margin-bottom: 16px; }
+.gf-label { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--tan); margin-bottom: 7px; letter-spacing: .02em; }
+.gf-label-hint { font-weight: 400; color: var(--muted-color); font-size: 11.5px; letter-spacing: 0; }
+.gf-input,
+.gf-select { width: 100%; padding: 11px 14px; font-size: 14.5px; font-family: inherit; background: #FDFAF1; border: 1px solid var(--border-strong); border-radius: 10px; color: var(--ink-text); transition: border-color .15s, box-shadow .15s, background .15s; }
+.gf-input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .02em; }
+.gf-input:focus,
+.gf-select:focus { outline: none; border-color: var(--gold); background: #FFFFFF; box-shadow: 0 0 0 3px rgba(230, 139, 83, .18); }
+.gf-input::placeholder { color: #B59B7B; }
+.gf-help { margin-top: 6px; font-size: 11.5px; color: var(--muted-color); line-height: 1.5; }
+
+/* 銀行代碼 input 下方即時預覽 hit 顯示銀行名 miss 顯示查無 空字串隱藏 */
+.gf-bank-preview { margin-top: 8px; font-size: 13px; min-height: 18px; line-height: 1.4; }
+.gf-bank-preview.is-hit { color: var(--gold); font-weight: 600; }
+.gf-bank-preview.is-hit::before { content: "✓ "; font-weight: 700; }
+.gf-bank-preview.is-miss { color: #A8392A; font-weight: 500; }
+.gf-bank-preview.is-miss::before { content: "✕ "; font-weight: 700; }
+
+/* === 雙欄並排 結帳日 + 繳費日 === */
+.gf-form-row { display: grid; gap: 12px; }
+.gf-form-row-2 { grid-template-columns: 1fr 1fr; }
+
+/* === 啟用 switch 樣式 包住 checkbox + label === */
+.gf-switch { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--ink); border-radius: 12px; border: 1px solid var(--border); margin-top: 6px; cursor: pointer; }
+.gf-switch input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold); cursor: pointer; flex-shrink: 0; }
+.gf-switch-label { flex: 1; font-size: 13.5px; color: var(--tan); font-weight: 500; }
+.gf-switch-label small { display: block; color: var(--muted-color); font-weight: 400; font-size: 11.5px; margin-top: 2px; }
+
+/* === Modal 內提示框 (取代原本 alert-warning / alert-danger) === */
+.gf-alert { padding: 12px 14px; border-radius: 10px; font-size: 13px; line-height: 1.6; margin-top: 12px; border: 1px solid transparent; }
+.gf-alert-warn { background: #FFF3DC; color: #6E4D0E; border-color: #F1D896; }
+.gf-alert-danger { background: #FBE7E2; color: #8E2E22; border-color: #E8B8B0; }
+
+/* === 待扣影響提示框 餘額調整時告知使用者影響範圍 === */
+.gf-impact { background: linear-gradient(180deg, #FFF7E5 0%, #FBEBD6 100%); border: 1px solid #F1D896; border-radius: 12px; padding: 14px 16px; margin-top: 4px; }
+.gf-impact-head { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 6px; }
+.gf-impact-sum { font-size: 13.5px; color: var(--ink-text); font-weight: 500; margin-bottom: 8px; }
+.gf-impact-list { list-style: none; padding: 0; margin: 0; }
+.gf-impact-list li { font-size: 12.5px; color: var(--tan); padding: 4px 0; border-top: 1px dashed #E8C98F; display: flex; justify-content: space-between; }
+
+/* === Modal 內按鈕 主要 + 次要 === */
+.gf-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; border: 1px solid transparent; cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit; text-decoration: none; }
+.gf-btn-primary { background: var(--gold); color: #fff; border-color: var(--gold); }
+.gf-btn-primary:hover { background: #A04918; color: #fff; }
+.gf-btn-ghost { background: transparent; color: var(--tan); border-color: var(--border-strong); }
+.gf-btn-ghost:hover { background: var(--ink); border-color: var(--gold); color: var(--gold); }
+.gf-btn-warning { background: #B47A1A; color: #fff; border-color: #B47A1A; }
+.gf-btn-warning:hover { background: #8E5F12; color: #fff; }
+
+/* ======================================================== */
+/* === Mobile RWD ≤768px 手機 / 直式平板               === */
+/* ======================================================== */
+
+@media (max-width: 768px) {
+    /* === Hero 區 標題副標仍直排 refresh 維持右上角 === */
+    .gf-dash-hero { gap: 12px; margin-bottom: 18px; }
+    .gf-dash-hero-left { flex: 1; min-width: 0; }
+    .gf-dash-eyebrow { font-size: 10px; letter-spacing: .18em; margin-bottom: 4px; }
+    .gf-dash-title { font-size: 26px; }
+    .gf-dash-subtitle { font-size: 13px; max-width: none; margin-top: 6px; }
+    .gf-dash-refresh { padding: 7px 12px; font-size: 12px; }
+
+    /* === KPI 兩張卡 並排 卡內 label 上 value 下 直排 === */
+    .gf-dash-stats { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+    .gf-dash-stat { padding: 14px 14px; flex-direction: column; align-items: flex-start; gap: 6px; }
+    .gf-dash-stat__label { font-size: 11px; letter-spacing: .08em; }
+    .gf-dash-stat__val { font-size: 20px; }
+
+    /* === Tabs 橫向 scroll 4 個 tab 在窄畫面塞不下 === */
+    .gf-dash-tabs { overflow-x: auto; flex-wrap: nowrap; max-width: 100%; padding: 4px; gap: 2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .gf-dash-tabs::-webkit-scrollbar { display: none; }                       /* 隱藏 scrollbar 但仍可滑動 */
+    .gf-dash-tab { padding: 8px 14px; font-size: 12.5px; flex-shrink: 0; }
+
+    /* === Panel padding 縮 標題與新增按鈕仍橫排 === */
+    .gf-dash-panel { padding: 18px 16px; border-radius: 14px; margin-bottom: 12px; }
+    .gf-dash-panel-head { gap: 10px; }
+    .gf-dash-panel-title { font-size: 16px; }
+    .gf-dash-add { padding: 7px 12px; font-size: 12px; }
+
+    /* === 表格 → 卡片堆疊 隱藏表頭 selector 須帶 .gf-dash-rows-* 才能蓋過桌面 specificity === */
+    .gf-dash-rows-bank .gf-dash-row-head,
+    .gf-dash-rows-card .gf-dash-row-head,
+    .gf-dash-rows-bill .gf-dash-row-head,
+    .gf-dash-rows-hist .gf-dash-row-head { display: none; }
+
+    .gf-dash-rows-bank .gf-dash-row,
+    .gf-dash-rows-card .gf-dash-row,
+    .gf-dash-rows-bill .gf-dash-row,
+    .gf-dash-rows-hist .gf-dash-row {
+        display: block;
+        padding: 12px 4px 6px;                                                /* 上 12 下 6 不對稱 因每個 row 底部緊接下一筆分隔線 不需多 padding */
+        gap: 0;
+        position: relative;                                                   /* 給絕對定位的編輯 cell 當錨點 */
+        border-bottom: 2px solid var(--border);                               /* 比桌面更粗更深 區隔每筆資料 */
+    }
+    .gf-dash-row:hover { background: transparent; }                           /* 手機沒 hover 移除桌面高亮 */
+
+    /* 每個 row 最後一 cell 移除底部 padding 避免和 row 自身 padding 累加造成視覺空隙 */
+    .gf-dash-row > div:last-child:not(:first-child) { padding-bottom: 0 !important; }
+
+    /* 拿掉之前桌面版「金額 cell」的 padding-right 桌面對齊技巧 手機不需要 */
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(3),
+    .gf-dash-rows-hist .gf-dash-row > div:nth-child(3) { padding-right: 0; }
+
+    /* 第 1 cell 銀行 變上方標題 加底部虛線分隔 右側預留空間給浮起的編輯按鈕 */
+    .gf-dash-row > div:first-child {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px dashed var(--border);
+        padding-right: 100px;                                                 /* 預留編輯按鈕空間 「修改金額」4 字 outline 樣式約 95px */
+    }
+
+    /* 其他 cell label + value 横排 用 ::before 顯示欄名 */
+    .gf-dash-row > div:not(:first-child) {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        text-align: left;
+    }
+    .gf-dash-row > div:not(:first-child)::before {
+        color: var(--tan);
+        font-size: 11.5px;
+        letter-spacing: .04em;
+        font-weight: 500;
+    }
+
+    /* 帳戶 tab 銀行帳戶名稱 + 類型 tag 顯示在 bank-mark 右下 隱藏原本第 2 cell 與第 3 cell */
+    .gf-dash-rows-bank .gf-dash-bank { align-items: flex-start; }
+    .gf-dash-rows-bank .gf-dash-bank-acct-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+    .gf-dash-rows-bank .gf-dash-bank-acct { font-size: 12.5px; color: var(--muted-color); font-weight: 400; line-height: 1.3; }
+    .gf-dash-rows-bank .gf-dash-bank-acct-row .gf-dash-bank-pay-label { font-size: 11px; color: var(--tan); font-weight: 500; }
+    .gf-dash-rows-bank .gf-dash-bank-acct-row .gf-dash-bank-pay-label::after { content: ":"; }
+    .gf-dash-rows-bank .gf-dash-bank-acct-row .gf-dash-tag { font-size: 10.5px; padding: 2px 7px; }
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(2),
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(3) { display: none !important; }
+
+    /* 帳戶 tab cell label (nth-child(2) 已 hide 仍保留設定 不影響其他 nth-child 編號) */
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(2)::before { content: "帳戶名稱"; }
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(3)::before { content: "類型"; }
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(4)::before { content: "餘額"; }
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(5)::before { content: "待扣"; }
+
+    /* 帳戶 tab 餘額 / 待扣 cell 用 grid 雙欄 label 固定 60px value 接後對齊 不要 space-between 把值推太遠 */
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(4),
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(5) {
+        display: grid !important;
+        grid-template-columns: 60px 1fr;
+    }
+
+    /* 信用卡 tab cell label */
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(2)::before { content: "結帳日"; }
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(3)::before { content: "繳費日"; }
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(4)::before { content: "自動扣繳"; }
+
+    /* 信用卡 row 改 grid 2 欄 讓結帳日 + 繳費日並排 自動扣繳已移到 bank-info 副標位置 故第 4 cell 隱藏 */
+    .gf-dash-rows-card .gf-dash-row { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; row-gap: 0; }
+    .gf-dash-rows-card .gf-dash-row > div:first-child { grid-column: 1 / -1; }
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(4) { display: none !important; }   /* 自動扣繳 cell 隱藏 已在 bank-info 內顯示 */
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(2),
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(3) {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 2px;
+        padding: 8px 0 !important;
+    }
+
+    /* 信用卡 tab 銀行徽章對齊頂部 (兩行內容) + 扣款副標顯示 跟帳戶 tab 的 acct-row 同邏輯 */
+    .gf-dash-rows-card .gf-dash-bank { align-items: flex-start; }
+    .gf-dash-rows-card .gf-dash-bank-pay-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+    .gf-dash-rows-card .gf-dash-bank-pay-label { font-size: 11px; color: var(--tan); font-weight: 500; }
+    .gf-dash-rows-card .gf-dash-bank-pay-label::after { content: ":"; }
+    .gf-dash-rows-card .gf-dash-bank-pay { font-size: 12.5px; color: var(--muted-color); font-weight: 400; }
+    .gf-dash-rows-card .gf-dash-bank-pay.gf-dash-pay-acct-warn { color: #B47A1A; font-weight: 500; }
+
+    /* 待繳 tab cell label */
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(2)::before { content: "繳費日"; }
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(3)::before { content: "帳單金額"; }
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(4)::before { content: "狀態"; }
+
+    /* 歷史 tab cell label */
+    .gf-dash-rows-hist .gf-dash-row > div:nth-child(2)::before { content: "繳費日"; }
+    .gf-dash-rows-hist .gf-dash-row > div:nth-child(3)::before { content: "帳單金額"; }
+    .gf-dash-rows-hist .gf-dash-row > div:nth-child(4)::before { content: "狀態"; }
+
+    /* 待繳 + 歷史 row 改 grid 3 欄 繳費日 + 帳單金額 + 狀態 並排 編輯按鈕仍 absolute */
+    .gf-dash-rows-bill .gf-dash-row,
+    .gf-dash-rows-hist .gf-dash-row { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 8px; row-gap: 0; }
+    .gf-dash-rows-bill .gf-dash-row > div:first-child,
+    .gf-dash-rows-hist .gf-dash-row > div:first-child { grid-column: 1 / -1; }
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(2),
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(3),
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(4),
+    .gf-dash-rows-hist .gf-dash-row > div:nth-child(2),
+    .gf-dash-rows-hist .gf-dash-row > div:nth-child(3),
+    .gf-dash-rows-hist .gf-dash-row > div:nth-child(4) {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 2px;
+        padding: 8px 0 !important;
+    }
+
+    /* 操作 cell 絕對定位到 row 右上 跟銀行徽章同一水平線 帳戶第 6 信用卡第 5 待繳第 5 歷史無 */
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(6),
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(5),
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(5) {
+        position: absolute;
+        top: 12px;                                                            /* 對齊 row padding-top */
+        right: 4px;                                                           /* 對齊 row padding-right */
+        padding: 0 !important;
+        justify-content: flex-end;
+    }
+    /* 浮起的編輯 cell 不要顯示 ::before label */
+    .gf-dash-rows-bank .gf-dash-row > div:nth-child(6)::before,
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(5)::before,
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(5)::before { content: ""; display: none; }
+
+    /* === 歷史 filter 加上 wrap 防止 select 擠 === */
+    .gf-dash-filter { width: 100%; }
+    .gf-dash-filter select { flex: 1 1 auto; min-width: 0; }
+    .gf-dash-filter-btn { padding: 7px 14px; }
+
+    /* === Modal padding 縮 close icon 大小不變 === */
+    .gf-modal-head { padding: 18px 18px 14px; }
+    .gf-modal-title { font-size: 18px; }
+    .gf-modal-sub { font-size: 12px; }
+    .gf-modal-body { padding: 18px 18px 4px; }
+    .gf-modal-foot { padding: 14px 18px 18px; }
+    .gf-field { margin-bottom: 14px; }
+    .gf-input, .gf-select { padding: 10px 12px; font-size: 14px; }
+}
+

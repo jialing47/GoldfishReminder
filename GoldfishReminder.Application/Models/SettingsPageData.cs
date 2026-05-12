@@ -79,6 +79,7 @@ public class HistoryBillItem
     public int BillMonth { get; set; }
     public int? BillAmount { get; set; }
     public bool Paid { get; set; }
+    public DateTime DueDate { get; set; }
 }
 
 // 歷史帳單年月選項

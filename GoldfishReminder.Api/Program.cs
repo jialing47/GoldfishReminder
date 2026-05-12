@@ -76,10 +76,19 @@ else
 // 非 2xx 狀態碼 例如 404 405 重新導到 /Error/{statusCode}
 app.UseStatusCodePagesWithReExecute("/Error/{0}");
 
-app.UseHttpsRedirection();
-
 // 啟用 wwwroot 靜態檔 讓 /logo.png /favicon.png 等可被存取
-app.UseStaticFiles();
+// 不使用 UseHttpsRedirection 因為 nginx 反向代理已在外層處理 SSL termination 內部跑 HTTP 即可
+// 設定長 cache header 1 年 immutable
+// CSS/JS 有 asp-append-version 會帶 ?v=hash 檔案改動後 URL 自動變化 客戶端會重抓新版
+// logo.png / favicon-32.png 沒帶 hash 改檔案後需要手動改檔名或清 cache 才會更新
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.Append(
+            "Cache-Control", "public, max-age=31536000, immutable");
+    }
+});
 
 // 路由
 app.MapControllers();

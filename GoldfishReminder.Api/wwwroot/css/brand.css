@@ -15,6 +15,10 @@
 html { scroll-padding-top: 80px; scroll-behavior: smooth; }                 /* 錨點捲動避開 nav 高度 */
 html, body { font-family: 'Noto Sans TC', system-ui, sans-serif; background: var(--bg); color: var(--ink-text); overflow-x: hidden; }
 
+/* === Sticky footer body 排成 flex column main 撐開剩餘高度 === */
+body { display: flex; flex-direction: column; min-height: 100vh; }
+body > main { flex: 1; }
+
 /* === Skip link 鍵盤跳至主要內容 === */
 .skip-link { position: absolute; top: -40px; left: 8px; background: var(--gold); color: #fff; padding: 8px 16px; border-radius: 4px; z-index: 9999; text-decoration: none; font-weight: 600; }
 .skip-link:focus { top: 8px; }
@@ -81,6 +85,19 @@ html, body { font-family: 'Noto Sans TC', system-ui, sans-serif; background: var
     .gf-doc-card { padding: 32px 24px; }
     .gf-section { grid-template-columns: 1fr; gap: 8px; }
     .gf-page-title { font-size: 32px; }
+    /* hero 區 container 加 padding 對齊 doc-card 內文字 避免上下左邊緣不齊 */
+    .gf-page-header .gf-doc-container { padding-left: 36px; padding-right: 36px; }
+}
+
+/* === Error / 訊息 hero 樣式 給 Error 頁與 Index ErrorMessage 區共用 === */
+.gf-error-wrap { min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 80px 0; }
+.gf-error-content { max-width: 560px; text-align: center; }
+.gf-error-title { font-family: 'Noto Serif TC', serif; font-size: 32px; font-weight: 700; color: var(--ink-text); margin-bottom: 14px; }
+.gf-error-sub { color: var(--muted-color); font-size: 15px; line-height: 1.8; margin-bottom: 0; }
+
+/* Error / 訊息 hero mobile 響應式 */
+@media (max-width: 768px) {
+    .gf-error-title { font-size: 24px; }
 }
 
 /* === 偏好減少動作的使用者關閉平滑捲動 === */
@@ -94,4 +111,18 @@ html, body { font-family: 'Noto Sans TC', system-ui, sans-serif; background: var
     .gf-brand > * + * { margin-left: 12px; }
     .gf-back > * + * { margin-left: 6px; }
 }
+
+/* === 通用 utility class 取代 Bootstrap 給 Privacy/Terms/Error 等不需要完整 Bootstrap 的頁面用 === */
+/* 跟 Bootstrap 同名 同值 同 Settings.cshtml 與 Index.cshtml 的 Bootstrap utility 可共存 (Bootstrap 全頁先載入這 5 個 class 已被覆蓋 但值一樣) */
+.container { width: 100%; max-width: 1200px; margin-right: auto; margin-left: auto; padding-right: 12px; padding-left: 12px; }
+.d-flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.justify-content-between { justify-content: space-between; }
+.align-items-center { align-items: center; }
+.gap-3 { gap: 1rem; }
+.gap-4 { gap: 1.5rem; }
+@media (min-width: 576px) { .container { max-width: 540px; } }
+@media (min-width: 768px) { .container { max-width: 720px; } }
+@media (min-width: 992px) { .container { max-width: 960px; } }
+@media (min-width: 1200px) { .container { max-width: 1140px; } }
 

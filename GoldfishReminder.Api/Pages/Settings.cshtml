@@ -1,0 +1,960 @@
+﻿@page
+@using System.Text.Json
+@model GoldfishReminder.Api.Pages.SettingsModel
+@{
+    Layout = null;
+    var activeTab = Model.ActiveTab;
+    var isBankTab = activeTab == "bankAccounts";
+    var isCardTab = activeTab == "creditSettings";
+    var isCurrentBillsTab = activeTab == "currentBills";
+    var isHistoryBillsTab = activeTab == "historyBills";
+
+    // 顯示自動扣繳/扣款帳戶 只顯示帳戶名稱 找不到回傳空字串
+    string FormatPayAccount(Guid? paymentBankAccountId, List<GoldfishReminder.Application.Models.BankAccountItem> bankAccounts)
+    {
+        if (!paymentBankAccountId.HasValue)
+        {
+            return string.Empty;
+        }
+        var payAcct = bankAccounts.FirstOrDefault(x => x.Id == paymentBankAccountId.Value);
+        if (payAcct == null)
+        {
+            return string.Empty;
+        }
+        return payAcct.AccountName;
+    }
+
+    // 信用卡結帳日顯示 個位數補 0 形如 每月 06 號
+    string FormatStatementDay(int statementDay)
+    {
+        return "每月 " + statementDay.ToString("D2") + " 號";
+    }
+
+    // 信用卡繳費日顯示 個位數補 0 PaymentDueDay 小於 StatementDay 即跨月
+    string FormatPaymentDay(int statementDay, int paymentDueDay)
+    {
+        var dayText = paymentDueDay.ToString("D2");
+        if (paymentDueDay < statementDay)
+        {
+            return "次月 " + dayText + " 號";
+        }
+        return "每月 " + dayText + " 號";
+    }
+
+    // tab 連結 class 是否要加 active
+    string TabClass(bool active)
+    {
+        if (active)
+        {
+            return "gf-dash-tab active";
+        }
+        return "gf-dash-tab";
+    }
+
+    // modal data-paymentaccountid 字串 Guid? 沒值就空字串
+    string FormatPaymentAccountId(Guid? paymentBankAccountId)
+    {
+        if (paymentBankAccountId.HasValue)
+        {
+            return paymentBankAccountId.Value.ToString();
+        }
+        return string.Empty;
+    }
+
+    // modal data-billamount 數字 int? 沒值就 0
+    int GetBillAmountOrZero(int? billAmount)
+    {
+        if (billAmount.HasValue)
+        {
+            return billAmount.Value;
+        }
+        return 0;
+    }
+
+    // 帳單金額按鈕文字 已確認金額顯示修改 未確認顯示輸入
+    string EditAmountLabel(bool amountConfirmed)
+    {
+        if (amountConfirmed)
+        {
+            return "修改金額";
+        }
+        return "輸入金額";
+    }
+
+    // 銀行名稱 fallback 空白時用 BankCode
+    string GetBankNameOrCode(string bankName, string bankCode)
+    {
+        if (string.IsNullOrWhiteSpace(bankName))
+        {
+            return bankCode;
+        }
+        return bankName;
+    }
+
+    var jsonOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+    var impactJson = JsonSerializer.Serialize(Model.BankAccountImpacts, jsonOptions);
+    var banksMap = Model.Banks.ToDictionary(x => x.BankCode, x => x.BankName);
+    var banksMapJson = JsonSerializer.Serialize(banksMap, jsonOptions);
+    var historyYears = Model.HistoryMonthOptions
+        .Select(x => x.Year)
+        .Distinct()
+        .OrderByDescending(x => x)
+        .ToList();
+    var historyMonths = Model.HistoryMonthOptions
+        .Where(x => x.Year == Model.HistoryYear)
+        .Select(x => x.Month)
+        .Distinct()
+        .OrderByDescending(x => x)
+        .ToList();
+    var historyMonthMap = Model.HistoryMonthOptions
+        .GroupBy(x => x.Year)
+        .ToDictionary(
+            x => x.Key,
+            x => x.Select(y => y.Month).Distinct().OrderByDescending(y => y).ToList());
+    var historyMonthMapJson = JsonSerializer.Serialize(historyMonthMap, jsonOptions);
+}
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>設定中心 — 金魚腦助手</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#B85423" />
+    <link rel="icon" type="image/png" sizes="32x32" href="~/favicon-32.png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/brand.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/settings-dashboard.css" asp-append-version="true" />
+</head>
+<body>
+<a href="#main" class="skip-link">跳至主要內容</a>
+<nav class="gf-nav">
+    <div class="container">
+        <a class="gf-brand" href="/">
+            <img src="~/logo.png" alt="金魚腦助手" />
+            <div>
+                <div class="gf-brand-zh">金魚腦助手</div>
+                <div class="gf-brand-en">GOLDFISH REMINDER</div>
+            </div>
+        </a>
+    </div>
+</nav>
+
+<main id="main" class="container py-4 d-flex flex-column">
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        @if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+        {
+            <div class="gf-dash-alert" role="alert">@Model.AlertMessage</div>
+        }
+        <div class="gf-error-wrap">
+            <div class="gf-error-content">
+                <div class="gf-error-title">無法載入頁面</div>
+                <p class="gf-error-sub">@Model.ErrorMessage</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        // 訊息提示 例如剛儲存後的成功提示
+        @if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+        {
+            <div class="gf-dash-alert" role="alert">@Model.AlertMessage</div>
+        }
+        <div class="gf-dash">
+
+            <!-- ===== 頂部 hero eyebrow + 標題 + 副標 + 重新整理 ===== -->
+            <div class="gf-dash-hero">
+                <div class="gf-dash-hero-left">
+                    <div class="gf-dash-eyebrow">DASHBOARD</div>
+                    <h1 class="gf-dash-title">設定中心</h1>
+                    <p class="gf-dash-subtitle">管理銀行帳戶、信用卡設定，以及本月與歷史帳單。</p>
+                </div>
+                <a class="gf-dash-refresh" href="/Settings?tab=@activeTab&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">↻ 重新整理</a>
+            </div>
+
+            <!-- ===== KPI 兩張並排 ===== -->
+            <div class="gf-dash-stats">
+                <div class="gf-dash-stat">
+                    <div class="gf-dash-stat__label">啟用中帳戶總餘額</div>
+                    <div class="gf-dash-stat__val">@Model.TotalEnabledBalance.ToString("N0")</div>
+                </div>
+                <div class="gf-dash-stat">
+                    <div class="gf-dash-stat__label">本月應繳金額</div>
+                    <div class="gf-dash-stat__val">@Model.CurrentMonthDueAmount.ToString("N0")</div>
+                </div>
+            </div>
+
+            <!-- ===== 4 個 tab pill ===== -->
+            <nav class="gf-dash-tabs" role="tablist">
+                <a class="@TabClass(isBankTab)" href="/Settings?tab=bankAccounts&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">帳戶</a>
+                <a class="@TabClass(isCardTab)" href="/Settings?tab=creditSettings&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">信用卡</a>
+                <a class="@TabClass(isCurrentBillsTab)" href="/Settings?tab=currentBills&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">待繳帳單</a>
+                <a class="@TabClass(isHistoryBillsTab)" href="/Settings?tab=historyBills&historyYear=@Model.HistoryYear&historyMonth=@Model.HistoryMonth">歷史帳單</a>
+            </nav>
+
+            <!-- ===== 帳戶設定 tab ===== -->
+            @if (isBankTab)
+            {
+                <div class="gf-dash-panel">
+                    <div class="gf-dash-panel-head">
+                        <h2 class="gf-dash-panel-title">啟用中</h2>
+                        <button class="gf-dash-add" type="button" id="btnAddBankAccount" data-bs-toggle="modal" data-bs-target="#bankAccountModal">＋ 新增帳戶</button>
+                    </div>
+                    @if (Model.EnabledBankAccounts.Count == 0)
+                    {
+                        <div class="gf-dash-empty">尚未有啟用中的銀行帳戶</div>
+                    }
+                    else
+                    {
+                        <div class="gf-dash-rows gf-dash-rows-bank" role="table">
+                            <div class="gf-dash-row-head" role="row">
+                                <div role="columnheader">銀行</div>
+                                <div role="columnheader">帳戶名稱</div>
+                                <div role="columnheader">類型</div>
+                                <div class="right" role="columnheader">餘額</div>
+                                <div class="right" role="columnheader">待扣</div>
+                                <div role="columnheader"></div>
+                            </div>
+                            @foreach (var bankAccount in Model.EnabledBankAccounts)
+                            {
+                                var pendingAmount = 0;                                  // 該帳戶待扣金額 找不到就 0
+                                if (Model.PendingAmountByAccountId.TryGetValue(bankAccount.Id, out var pa))
+                                {
+                                    pendingAmount = pa;
+                                }
+                                var bankFullName = bankAccount.BankCode;                // 預設沒對應就用 code
+                                if (Model.BankNameByCode.TryGetValue(bankAccount.BankCode, out var bnm))
+                                {
+                                    bankFullName = bnm;
+                                }
+                                <div class="gf-dash-row" role="row">
+                                    <div role="cell">
+                                        <div class="gf-dash-bank">
+                                            <div class="gf-dash-bank-mark">@bankAccount.BankCode</div>
+                                            <div class="gf-dash-bank-info">
+                                                <div class="gf-dash-bank-name">@bankFullName</div>
+                                                <div class="gf-dash-bank-acct-row">
+                                                    <span class="gf-dash-bank-pay-label">名稱</span>
+                                                    <span class="gf-dash-bank-acct">@bankAccount.AccountName</span>
+                                                    @if (bankAccount.AccountType == "digital")
+                                                    {
+                                                        <span class="gf-dash-tag gf-dash-tag-digital">數位</span>
+                                                    }
+                                                    else if (bankAccount.AccountType == "physical")
+                                                    {
+                                                        <span class="gf-dash-tag gf-dash-tag-physical">實體</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="gf-dash-tag gf-dash-tag-physical">@bankAccount.AccountType</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div role="cell" class="gf-dash-acct-name">@bankAccount.AccountName</div>
+                                    <div role="cell">
+                                        @if (bankAccount.AccountType == "digital")
+                                        {
+                                            <span class="gf-dash-tag gf-dash-tag-digital">數位</span>
+                                        }
+                                        else if (bankAccount.AccountType == "physical")
+                                        {
+                                            <span class="gf-dash-tag gf-dash-tag-physical">實體</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gf-dash-tag gf-dash-tag-physical">@bankAccount.AccountType</span>
+                                        }
+                                    </div>
+                                    <div role="cell" class="right">
+                                        <span class="gf-dash-amt">@bankAccount.Balance.ToString("N0")</span>
+                                    </div>
+                                    <div role="cell" class="right">
+                                        @if (pendingAmount > 0)
+                                        {
+                                            <span class="gf-dash-pending"><span class="cur">−</span>@pendingAmount.ToString("N0")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gf-dash-amt-none">—</span>
+                                        }
+                                    </div>
+                                    <div role="cell" class="right">
+                                        <button class="gf-dash-edit"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#bankAccountModal"
+                                                data-id="@bankAccount.Id"
+                                                data-bankcode="@bankAccount.BankCode"
+                                                data-accountname="@bankAccount.AccountName"
+                                                data-accounttype="@bankAccount.AccountType"
+                                                data-enabled="@bankAccount.Enabled">編輯</button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <!-- 停用中銀行帳戶 collapse -->
+                    <button class="gf-dash-collapse-trigger" type="button" data-bs-toggle="collapse" data-bs-target="#disabledAccountsCollapse" aria-expanded="false" aria-controls="disabledAccountsCollapse">
+                        <span>停用中</span>
+                        <span class="count">展開 (@Model.DisabledBankAccounts.Count)</span>
+                    </button>
+                    <div class="collapse mt-3" id="disabledAccountsCollapse">
+                        @if (Model.DisabledBankAccounts.Count == 0)
+                        {
+                            <div class="gf-dash-empty">沒有停用中的銀行帳戶</div>
+                        }
+                        else
+                        {
+                            <div class="gf-dash-rows gf-dash-rows-bank" role="table">
+                                <div class="gf-dash-row-head" role="row">
+                                    <div role="columnheader">銀行</div>
+                                    <div role="columnheader">帳戶名稱</div>
+                                    <div role="columnheader">類型</div>
+                                    <div class="right" role="columnheader">餘額</div>
+                                    <div class="right" role="columnheader">待扣</div>
+                                    <div role="columnheader"></div>
+                                </div>
+                                @foreach (var bankAccount in Model.DisabledBankAccounts)
+                                {
+                                    var bankFullName = bankAccount.BankCode;
+                                    if (Model.BankNameByCode.TryGetValue(bankAccount.BankCode, out var bnm))
+                                    {
+                                        bankFullName = bnm;
+                                    }
+                                    <div class="gf-dash-row" role="row">
+                                        <div role="cell">
+                                            <div class="gf-dash-bank">
+                                                <div class="gf-dash-bank-mark">@bankAccount.BankCode</div>
+                                                <div class="gf-dash-bank-info">
+                                                    <div class="gf-dash-bank-name">@bankFullName</div>
+                                                    <div class="gf-dash-bank-acct-row">
+                                                        <span class="gf-dash-bank-pay-label">名稱</span>
+                                                        <span class="gf-dash-bank-acct">@bankAccount.AccountName</span>
+                                                        @if (bankAccount.AccountType == "digital")
+                                                        {
+                                                            <span class="gf-dash-tag gf-dash-tag-digital">數位</span>
+                                                        }
+                                                        else if (bankAccount.AccountType == "physical")
+                                                        {
+                                                            <span class="gf-dash-tag gf-dash-tag-physical">實體</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="gf-dash-tag gf-dash-tag-physical">@bankAccount.AccountType</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div role="cell" class="gf-dash-acct-name">@bankAccount.AccountName</div>
+                                        <div role="cell">
+                                            @if (bankAccount.AccountType == "digital")
+                                            {
+                                                <span class="gf-dash-tag gf-dash-tag-digital">數位</span>
+                                            }
+                                            else if (bankAccount.AccountType == "physical")
+                                            {
+                                                <span class="gf-dash-tag gf-dash-tag-physical">實體</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="gf-dash-tag gf-dash-tag-physical">@bankAccount.AccountType</span>
+                                            }
+                                        </div>
+                                        <div role="cell" class="right">
+                                            <span class="gf-dash-amt">@bankAccount.Balance.ToString("N0")</span>
+                                        </div>
+                                        <div role="cell" class="right">
+                                            <span class="gf-dash-amt-none">—</span>
+                                        </div>
+                                        <div role="cell" class="right">
+                                            <button class="gf-dash-edit"
+                                                    type="button"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#bankAccountModal"
+                                                    data-id="@bankAccount.Id"
+                                                    data-bankcode="@bankAccount.BankCode"
+                                                    data-accountname="@bankAccount.AccountName"
+                                                    data-accounttype="@bankAccount.AccountType"
+                                                    data-enabled="@bankAccount.Enabled">編輯</button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- ===== 信用卡設定 tab ===== -->
+            @if (isCardTab)
+            {
+                <div class="gf-dash-panel">
+                    <div class="gf-dash-panel-head">
+                        <h2 class="gf-dash-panel-title">啟用中</h2>
+                        <button class="gf-dash-add" type="button" id="btnAddCreditSetting" data-bs-toggle="modal" data-bs-target="#creditSettingModal">＋ 新增信用卡</button>
+                    </div>
+                    @if (Model.EnabledCreditSettings.Count == 0)
+                    {
+                        <div class="gf-dash-empty">尚未有啟用中的信用卡設定</div>
+                    }
+                    else
+                    {
+                        <div class="gf-dash-rows gf-dash-rows-card" role="table">
+                            <div class="gf-dash-row-head" role="row">
+                                <div role="columnheader">銀行</div>
+                                <div role="columnheader">結帳日</div>
+                                <div role="columnheader">繳費日</div>
+                                <div role="columnheader">自動扣繳帳戶</div>
+                                <div role="columnheader"></div>
+                            </div>
+                            @foreach (var creditSetting in Model.EnabledCreditSettings)
+                            {
+                                var bankFullName = creditSetting.BankCode;
+                                if (Model.BankNameByCode.TryGetValue(creditSetting.BankCode, out var bnm))
+                                {
+                                    bankFullName = bnm;
+                                }
+                                var payAcctDisplay = FormatPayAccount(creditSetting.PaymentBankAccountId, Model.BankAccounts);
+                                var paymentDayText = FormatPaymentDay(creditSetting.StatementDay, creditSetting.PaymentDueDay);
+                                <div class="gf-dash-row" role="row">
+                                    <div role="cell">
+                                        <div class="gf-dash-bank">
+                                            <div class="gf-dash-bank-mark">@creditSetting.BankCode</div>
+                                            <div class="gf-dash-bank-info">
+                                                <div class="gf-dash-bank-name">@bankFullName</div>
+                                                <div class="gf-dash-bank-pay-row">
+                                                    <span class="gf-dash-bank-pay-label">扣款</span>
+                                                    @if (string.IsNullOrEmpty(payAcctDisplay))
+                                                    {
+                                                        <span class="gf-dash-bank-pay gf-dash-pay-acct-warn">未設定</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="gf-dash-bank-pay">@payAcctDisplay</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div role="cell"><span class="gf-dash-day">@FormatStatementDay(creditSetting.StatementDay)</span></div>
+                                    <div role="cell"><span class="gf-dash-day">@paymentDayText</span></div>
+                                    <div role="cell">
+                                        @if (string.IsNullOrEmpty(payAcctDisplay))
+                                        {
+                                            <span class="gf-dash-pay-acct-warn">未設定</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gf-dash-pay-acct">@payAcctDisplay</span>
+                                        }
+                                    </div>
+                                    <div role="cell" class="right">
+                                        <button class="gf-dash-edit"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#creditSettingModal"
+                                                data-id="@creditSetting.Id"
+                                                data-bankcode="@creditSetting.BankCode"
+                                                data-statementday="@creditSetting.StatementDay"
+                                                data-paymentdueday="@creditSetting.PaymentDueDay"
+                                                data-paymentaccountid="@FormatPaymentAccountId(creditSetting.PaymentBankAccountId)"
+                                                data-enabled="@creditSetting.Enabled">編輯</button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <!-- 停用中信用卡 collapse -->
+                    <button class="gf-dash-collapse-trigger" type="button" data-bs-toggle="collapse" data-bs-target="#disabledCreditSettingsCollapse" aria-expanded="false" aria-controls="disabledCreditSettingsCollapse">
+                        <span>停用中</span>
+                        <span class="count">展開 (@Model.DisabledCreditSettings.Count)</span>
+                    </button>
+                    <div class="collapse mt-3" id="disabledCreditSettingsCollapse">
+                        @if (Model.DisabledCreditSettings.Count == 0)
+                        {
+                            <div class="gf-dash-empty">沒有停用中的信用卡</div>
+                        }
+                        else
+                        {
+                            <div class="gf-dash-rows gf-dash-rows-card" role="table">
+                                <div class="gf-dash-row-head" role="row">
+                                    <div role="columnheader">銀行</div>
+                                    <div role="columnheader">結帳日</div>
+                                    <div role="columnheader">繳費日</div>
+                                    <div role="columnheader">自動扣繳帳戶</div>
+                                    <div role="columnheader"></div>
+                                </div>
+                                @foreach (var creditSetting in Model.DisabledCreditSettings)
+                                {
+                                    var bankFullName = creditSetting.BankCode;
+                                    if (Model.BankNameByCode.TryGetValue(creditSetting.BankCode, out var bnm))
+                                    {
+                                        bankFullName = bnm;
+                                    }
+                                    var payAcctDisplay = FormatPayAccount(creditSetting.PaymentBankAccountId, Model.BankAccounts);
+                                    var paymentDayText = FormatPaymentDay(creditSetting.StatementDay, creditSetting.PaymentDueDay);
+                                    <div class="gf-dash-row" role="row">
+                                        <div role="cell">
+                                            <div class="gf-dash-bank">
+                                                <div class="gf-dash-bank-mark">@creditSetting.BankCode</div>
+                                                <div class="gf-dash-bank-info">
+                                                    <div class="gf-dash-bank-name">@bankFullName</div>
+                                                    <div class="gf-dash-bank-pay-row">
+                                                        <span class="gf-dash-bank-pay-label">扣款</span>
+                                                        @if (string.IsNullOrEmpty(payAcctDisplay))
+                                                        {
+                                                            <span class="gf-dash-bank-pay gf-dash-pay-acct-warn">未設定</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="gf-dash-bank-pay">@payAcctDisplay</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div role="cell"><span class="gf-dash-day">@FormatStatementDay(creditSetting.StatementDay)</span></div>
+                                        <div role="cell"><span class="gf-dash-day">@paymentDayText</span></div>
+                                        <div role="cell">
+                                            @if (string.IsNullOrEmpty(payAcctDisplay))
+                                            {
+                                                <span class="gf-dash-pay-acct-none">—</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="gf-dash-pay-acct">@payAcctDisplay</span>
+                                            }
+                                        </div>
+                                        <div role="cell" class="right">
+                                            <button class="gf-dash-edit"
+                                                    type="button"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#creditSettingModal"
+                                                    data-id="@creditSetting.Id"
+                                                    data-bankcode="@creditSetting.BankCode"
+                                                    data-statementday="@creditSetting.StatementDay"
+                                                    data-paymentdueday="@creditSetting.PaymentDueDay"
+                                                    data-paymentaccountid="@FormatPaymentAccountId(creditSetting.PaymentBankAccountId)"
+                                                    data-enabled="@creditSetting.Enabled">編輯</button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- ===== 待繳帳單 tab ===== -->
+            @if (isCurrentBillsTab)
+            {
+                <div class="gf-dash-panel">
+                    <div class="gf-dash-panel-head">
+                        <h2 class="gf-dash-panel-title">本月待繳</h2>
+                    </div>
+                    @if (Model.CurrentBills.Count == 0)
+                    {
+                        <div class="gf-dash-empty">目前沒有需要待繳的帳單</div>
+                    }
+                    else
+                    {
+                        <div class="gf-dash-rows gf-dash-rows-bill" role="table">
+                            <div class="gf-dash-row-head" role="row">
+                                <div role="columnheader">銀行</div>
+                                <div role="columnheader">繳費日</div>
+                                <div class="right" role="columnheader">帳單金額</div>
+                                <div role="columnheader">狀態</div>
+                                <div role="columnheader"></div>
+                            </div>
+                            @foreach (var currentBill in Model.CurrentBills)
+                            {
+                                var bankNameOnly = GetBankNameOrCode(currentBill.BankName, currentBill.BankCode);
+                                <div class="gf-dash-row" role="row">
+                                    <div role="cell">
+                                        <div class="gf-dash-bank">
+                                            <div class="gf-dash-bank-mark">@currentBill.BankCode</div>
+                                            <div class="gf-dash-bank-name">@bankNameOnly</div>
+                                        </div>
+                                    </div>
+                                    <div role="cell"><span class="gf-dash-day">@($"{currentBill.BillMonth:D2}/{currentBill.PaymentDueDay:D2}")</span></div>
+                                    <div role="cell" class="right">
+                                        @if (currentBill.AmountConfirmed && currentBill.BillAmount.HasValue)
+                                        {
+                                            <span class="gf-dash-amt">@currentBill.BillAmount.Value.ToString("N0")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gf-dash-amt-danger">—</span>
+                                        }
+                                    </div>
+                                    <div role="cell">
+                                        @if (currentBill.Paid)
+                                        {
+                                            <span class="gf-dash-status gf-dash-status-paid">已繳</span>
+                                        }
+                                        else if (!currentBill.AmountConfirmed)
+                                        {
+                                            <span class="gf-dash-status gf-dash-status-danger">未設金額</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gf-dash-status gf-dash-status-due">待繳</span>
+                                        }
+                                    </div>
+                                    <div role="cell" class="right">
+                                        @if (!currentBill.Paid)
+                                        {
+                                            <div class="gf-dash-actions">
+                                                <button class="gf-dash-edit"
+                                                        type="button"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#billAmountModal"
+                                                        data-billid="@currentBill.Id"
+                                                        data-billamount="@GetBillAmountOrZero(currentBill.BillAmount)">@EditAmountLabel(currentBill.AmountConfirmed)</button>
+                                                @if (currentBill.AmountConfirmed && string.IsNullOrWhiteSpace(currentBill.PaymentAccountName))
+                                                {
+                                                    <form method="post" asp-page="/Settings" asp-page-handler="MarkBillPaid" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="tab" value="currentBills" />
+                                                        <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
+                                                        <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
+                                                        <input type="hidden" name="billId" value="@currentBill.Id" />
+                                                        <button type="submit" class="gf-dash-edit">確認已繳費</button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- ===== 歷史帳單 tab ===== -->
+            @if (isHistoryBillsTab)
+            {
+                <div class="gf-dash-panel">
+                    <div class="gf-dash-panel-head">
+                        <h2 class="gf-dash-panel-title">歷史帳單</h2>
+                        <form method="get" class="gf-dash-filter">
+                            <input type="hidden" name="tab" value="historyBills" />
+                            <select name="historyYear" id="historyYearSelect">
+                                @foreach (var year in historyYears)
+                                {
+                                    <option value="@year" selected="@(year == Model.HistoryYear)">@year</option>
+                                }
+                            </select>
+                            <span class="gf-dash-filter-unit">年</span>
+                            <select name="historyMonth" id="historyMonthSelect">
+                                @foreach (var month in historyMonths)
+                                {
+                                    <option value="@month" selected="@(month == Model.HistoryMonth)">@month.ToString("D2")</option>
+                                }
+                            </select>
+                            <span class="gf-dash-filter-unit">月</span>
+                            <button type="submit" class="gf-dash-filter-btn">查詢</button>
+                        </form>
+                    </div>
+                    @if (Model.HistoryBills.Count == 0)
+                    {
+                        <div class="gf-dash-empty">這個月份目前沒有歷史帳單資料</div>
+                    }
+                    else
+                    {
+                        <div class="gf-dash-rows gf-dash-rows-hist" role="table">
+                            <div class="gf-dash-row-head" role="row">
+                                <div role="columnheader">銀行</div>
+                                <div role="columnheader">繳費日</div>
+                                <div class="right" role="columnheader">帳單金額</div>
+                                <div role="columnheader">狀態</div>
+                            </div>
+                            @foreach (var historyBill in Model.HistoryBills)
+                            {
+                                var bankNameOnly = GetBankNameOrCode(historyBill.BankName, historyBill.BankCode);
+                                // 歷史帳單三態 已繳 未到繳費日 未繳 由 DueDate 與今日比對
+                                var notYetDue = !historyBill.Paid && historyBill.DueDate.Date > Model.TodayInTaipei.Date;
+                                <div class="gf-dash-row" role="row">
+                                    <div role="cell">
+                                        <div class="gf-dash-bank">
+                                            <div class="gf-dash-bank-mark">@historyBill.BankCode</div>
+                                            <div class="gf-dash-bank-name">@bankNameOnly</div>
+                                        </div>
+                                    </div>
+                                    <div role="cell"><span class="gf-dash-day">@historyBill.DueDate.ToString("MM/dd")</span></div>
+                                    <div role="cell" class="right">
+                                        @if (historyBill.BillAmount.HasValue)
+                                        {
+                                            <span class="gf-dash-amt">@historyBill.BillAmount.Value.ToString("N0")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gf-dash-amt-none">—</span>
+                                        }
+                                    </div>
+                                    <div role="cell">
+                                        @if (historyBill.Paid)
+                                        {
+                                            <span class="gf-dash-status gf-dash-status-paid">已繳</span>
+                                        }
+                                        else if (notYetDue)
+                                        {
+                                            <span class="gf-dash-status gf-dash-status-warn">未到繳費日</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gf-dash-status gf-dash-status-danger">未繳</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+        </div>
+    }
+</main>
+
+<datalist id="bankCodeList">
+@foreach (var bank in Model.Banks)
+{
+    <option value="@bank.BankCode">@bank.BankName</option>
+}
+</datalist>
+
+<div class="modal fade" id="bankAccountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content gf-modal-content">
+            <div class="gf-modal-head">
+                <div class="gf-modal-head-left">
+                    <div class="gf-modal-eyebrow">EDIT</div>
+                    <h2 class="gf-modal-title" id="bankAccountModalLabel">銀行帳戶</h2>
+                    <div class="gf-modal-sub">用來追蹤餘額 或設為信用卡的扣款帳戶</div>
+                </div>
+                <button type="button" class="gf-modal-close" data-bs-dismiss="modal" aria-label="關閉">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form id="bankAccountForm" method="post" asp-page="/Settings" asp-page-handler="UpsertBankAccount">
+                @Html.AntiForgeryToken()
+                <div class="gf-modal-body">
+                    <input type="hidden" name="tab" value="bankAccounts" />
+                    <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
+                    <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
+                    <input type="hidden" name="BankAccountForm.Id" id="baId" value="@Model.BankAccountForm.Id" />
+
+                    <div class="gf-field">
+                        <label class="gf-label" for="baBankCode">銀行代碼<span class="gf-label-hint">3 碼數字</span></label>
+                        <input class="gf-input mono"
+                               name="BankAccountForm.BankCode"
+                               id="baBankCode"
+                               maxlength="10"
+                               required
+                               list="bankCodeList"
+                               value="@Model.BankAccountForm.BankCode"
+                               placeholder="例如 812" />
+                        <div class="gf-bank-preview" id="baBankPreview" aria-live="polite"></div>
+                    </div>
+
+                    <div class="gf-field">
+                        <label class="gf-label" for="baAccountName">帳戶名稱</label>
+                        <input class="gf-input" name="BankAccountForm.AccountName" id="baAccountName" required value="@Model.BankAccountForm.AccountName" />
+                    </div>
+
+                    <div class="gf-field">
+                        <label class="gf-label" for="baAccountType">帳戶類型</label>
+                        <select class="gf-select" name="BankAccountForm.AccountType" id="baAccountType" required>
+                            <option value="digital">數位帳戶</option>
+                            <option value="physical">實體帳戶</option>
+                        </select>
+                    </div>
+
+                    <div class="gf-field">
+                        <label class="gf-label" for="baBalance">餘額<span class="gf-label-hint">可空白</span></label>
+                        <input class="gf-input mono" name="BankAccountForm.Balance" id="baBalance" inputmode="decimal" value="@Model.BankAccountForm.Balance" />
+                        <div class="gf-help">留空代表不更新餘額 只更新其他欄位</div>
+                    </div>
+
+                    <div class="gf-impact d-none" id="baImpactBox">
+                        <div class="gf-impact-head">待扣影響提示</div>
+                        <div class="gf-impact-sum" id="baImpactSummary"></div>
+                        <ul class="gf-impact-list" id="baImpactDetails"></ul>
+                    </div>
+
+                    <label class="gf-switch" for="baEnabled">
+                        <input type="checkbox" name="BankAccountForm.Enabled" value="true" id="baEnabled" />
+                        <div class="gf-switch-label">啟用此帳戶<small>停用會自動解除信用卡對它的自動扣款設定</small></div>
+                    </label>
+
+                    <div id="baDisableWarning" class="gf-alert gf-alert-warn d-none">
+                        停用此帳戶會自動解除所有信用卡對它的自動扣款設定
+                    </div>
+
+                    <div id="baError" class="gf-alert gf-alert-danger d-none"></div>
+                </div>
+                <div class="gf-modal-foot">
+                    <button type="button" class="gf-btn gf-btn-ghost" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="gf-btn gf-btn-primary" id="baSubmitBtn">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="creditSettingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content gf-modal-content">
+            <div class="gf-modal-head">
+                <div class="gf-modal-head-left">
+                    <div class="gf-modal-eyebrow">EDIT</div>
+                    <h2 class="gf-modal-title" id="creditSettingModalLabel">信用卡設定</h2>
+                    <div class="gf-modal-sub">設定結帳日 繳費日 與對應的自動扣款帳戶</div>
+                </div>
+                <button type="button" class="gf-modal-close" data-bs-dismiss="modal" aria-label="關閉">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form id="creditSettingForm" method="post" asp-page="/Settings" asp-page-handler="UpsertCreditSetting">
+                @Html.AntiForgeryToken()
+                <div class="gf-modal-body">
+                    <input type="hidden" name="tab" value="creditSettings" />
+                    <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
+                    <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
+                    <input type="hidden" name="CreditSettingForm.Id" id="csId" value="@Model.CreditSettingForm.Id" />
+
+                    <div class="gf-field">
+                        <label class="gf-label" for="csBankCode">銀行代碼<span class="gf-label-hint">3 碼數字</span></label>
+                        <input class="gf-input mono"
+                               name="CreditSettingForm.BankCode"
+                               id="csBankCode"
+                               maxlength="10"
+                               required
+                               list="bankCodeList"
+                               value="@Model.CreditSettingForm.BankCode"
+                               placeholder="例如 812" />
+                        <div class="gf-bank-preview" id="csBankPreview" aria-live="polite"></div>
+                    </div>
+
+                    <div class="gf-form-row gf-form-row-2">
+                        <div class="gf-field">
+                            <label class="gf-label" for="csStatementDay">結帳日<span class="gf-label-hint">1-31</span></label>
+                            <input class="gf-input mono" type="number" name="CreditSettingForm.StatementDay" id="csStatementDay" min="1" max="31" required value="@Model.CreditSettingForm.StatementDay" />
+                        </div>
+                        <div class="gf-field">
+                            <label class="gf-label" for="csPaymentDueDay">繳費日<span class="gf-label-hint">1-31</span></label>
+                            <input class="gf-input mono" type="number" name="CreditSettingForm.PaymentDueDay" id="csPaymentDueDay" min="1" max="31" required value="@Model.CreditSettingForm.PaymentDueDay" />
+                        </div>
+                    </div>
+
+                    <div class="gf-field">
+                        <label class="gf-label" for="csPaymentAccountId">扣款帳戶<span class="gf-label-hint">可空白</span></label>
+                        <select class="gf-select" name="CreditSettingForm.PaymentBankAccountId" id="csPaymentAccountId">
+                            <option value="">未設定</option>
+                            @foreach (var opt in Model.PaymentAccountOptions)
+                            {
+                                <option value="@opt.Id">@opt.DisplayName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <label class="gf-switch" for="csEnabled">
+                        <input type="checkbox" name="CreditSettingForm.Enabled" value="true" id="csEnabled" />
+                        <div class="gf-switch-label">啟用此卡<small>停用後不再加入排程提醒</small></div>
+                    </label>
+
+                    <div id="csError" class="gf-alert gf-alert-danger d-none"></div>
+                </div>
+                <div class="gf-modal-foot">
+                    <button type="button" class="gf-btn gf-btn-ghost" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="gf-btn gf-btn-primary">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="billAmountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content gf-modal-content">
+            <div class="gf-modal-head">
+                <div class="gf-modal-head-left">
+                    <div class="gf-modal-eyebrow">EDIT</div>
+                    <h2 class="gf-modal-title" id="billAmountModalLabel">修改帳單金額</h2>
+                    <div class="gf-modal-sub">只會修改金額 其他欄位維持原樣</div>
+                </div>
+                <button type="button" class="gf-modal-close" data-bs-dismiss="modal" aria-label="關閉">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form id="billAmountForm" method="post" asp-page="/Settings" asp-page-handler="UpdateBillAmount">
+                @Html.AntiForgeryToken()
+                <div class="gf-modal-body">
+                    <input type="hidden" name="tab" value="currentBills" />
+                    <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
+                    <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
+                    <input type="hidden" name="CurrentBillAmountForm.BillId" id="cbBillId" value="@Model.CurrentBillAmountForm.BillId" />
+
+                    <div class="gf-field">
+                        <label class="gf-label" for="cbBillAmount">帳單金額</label>
+                        <input class="gf-input mono"
+                               type="number"
+                               name="CurrentBillAmountForm.BillAmount"
+                               id="cbBillAmount"
+                               min="0"
+                               required
+                               value="@Model.CurrentBillAmountForm.BillAmount" />
+                        <div class="gf-help">輸入信用卡帳單該繳的金額 系統會在繳款日前提醒</div>
+                    </div>
+
+                    <div id="cbError" class="gf-alert gf-alert-danger d-none"></div>
+                </div>
+                <div class="gf-modal-foot">
+                    <button type="button" class="gf-btn gf-btn-ghost" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="gf-btn gf-btn-primary">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" defer></script>
+<script>
+    // 把 Razor 渲染的設定中心資料注入到 window 全域 供 settings.js 取用
+    window.__gfSettings = {
+        impactData: @Html.Raw(impactJson),
+        historyMonthMap: @Html.Raw(historyMonthMapJson),
+        banksMap: @Html.Raw(banksMapJson)
+    };
+</script>
+<script src="~/js/settings.js" asp-append-version="true" defer></script>
+
+<footer class="gf-footer">
+    <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <span class="gf-footer-brand">金魚腦助手</span>
+            <span class="gf-footer-copy">© @DateTime.Now.Year GoldfishReminder · All rights reserved.</span>
+        </div>
+        <div class="d-flex gap-4">
+            <a asp-page="/Privacy">隱私權政策</a>
+            <a asp-page="/Terms">服務條款</a>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
