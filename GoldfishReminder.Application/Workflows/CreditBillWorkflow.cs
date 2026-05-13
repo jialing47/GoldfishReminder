@@ -161,21 +161,13 @@ public partial class CreditBillWorkflow
             throw new UnauthorizedAccessException($"CreditBill does not belong to the user. BillId:{billId}");
         }
 
-        var updateRequest = new UpsertCreditBillRequest
+        await billService.UpdateAsync(new UpdateCreditBillRequest
         {
-            Id = billContext.CreditBill.Id,
-            UserId = billContext.CreditBill.UserId,
-            BankCode = billContext.CreditBill.BankCode,
-            BillYear = billContext.CreditBill.BillYear,
-            BillMonth = billContext.CreditBill.BillMonth,
-            StatementDay = billContext.CreditBill.StatementDay,
-            PaymentDueDay = billContext.CreditBill.PaymentDueDay,
+            BillId = billContext.CreditBill.Id,
             BillAmount = billAmount,
             AmountConfirmed = true,
             Paid = billContext.CreditBill.Paid
-        };
-
-        await billService.UpsertAsync(updateRequest, cancellationToken);
+        }, cancellationToken);
 
         billContext.CreditBill.BillAmount = billAmount;
         billContext.CreditBill.AmountConfirmed = true;
@@ -245,21 +237,13 @@ public partial class CreditBillWorkflow
             throw new UnauthorizedAccessException($"CreditBill does not belong to the user. BillId:{billId}");
         }
 
-        var updateRequest = new UpsertCreditBillRequest
+        await billService.UpdateAsync(new UpdateCreditBillRequest
         {
-            Id = billContext.CreditBill.Id,
-            UserId = billContext.CreditBill.UserId,
-            BankCode = billContext.CreditBill.BankCode,
-            BillYear = billContext.CreditBill.BillYear,
-            BillMonth = billContext.CreditBill.BillMonth,
-            StatementDay = billContext.CreditBill.StatementDay,
-            PaymentDueDay = billContext.CreditBill.PaymentDueDay,
+            BillId = billContext.CreditBill.Id,
             BillAmount = billContext.CreditBill.BillAmount,
             AmountConfirmed = billContext.CreditBill.AmountConfirmed,
             Paid = true
-        };
-
-        await billService.UpsertAsync(updateRequest, cancellationToken);
+        }, cancellationToken);
     }
 
     // 補建今日帳單
@@ -279,7 +263,7 @@ public partial class CreditBillWorkflow
             .ToList();
 
         var existingKeys = await dataService.GetExistingKeysAsync(candidateKeys, cancellationToken);
-        var createRequests = new List<UpsertCreditBillRequest>();
+        var createRequests = new List<InsertCreditBillRequest>();
         var enqueued = new HashSet<(Guid userId, string bankCode, int billYear, int billMonth)>();
 
         foreach (var candidate in candidates)
@@ -297,17 +281,14 @@ public partial class CreditBillWorkflow
                 continue;
             }
 
-            createRequests.Add(new UpsertCreditBillRequest
+            createRequests.Add(new InsertCreditBillRequest
             {
                 UserId = setting.UserId,
                 BankCode = setting.BankCode,
                 BillYear = candidate.TargetYear,
                 BillMonth = candidate.TargetMonth,
                 StatementDay = setting.StatementDay,
-                PaymentDueDay = setting.PaymentDueDay,
-                BillAmount = null,
-                AmountConfirmed = false,
-                Paid = false
+                PaymentDueDay = setting.PaymentDueDay
             });
 
             enqueued.Add(key);
@@ -364,8 +345,9 @@ public partial class CreditBillWorkflow
                 return false;
 
             case BillActionType.DisableReminder:
+                // DisableAllSettingsAsync 內部用 ExecuteUpdateAsync 直接 bulk SQL commit
+                // 不過 ChangeTracker 所以呼叫端不需要再 SaveChanges
                 await dataService.DisableAllSettingsAsync(creditBill.UserId, cancellationToken);
-                await dataService.SaveChangesAsync(cancellationToken);
                 await notificationWorkflow.SendByActionAsync(creditBill.UserId, GetChannel(user), BillActionType.DisableReminder, creditBill, bank, null, null, cancellationToken);
                 return true;
 

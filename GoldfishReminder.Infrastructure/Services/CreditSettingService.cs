@@ -125,6 +125,13 @@ public class CreditSettingService : ICreditSettingService
             throw new ArgumentOutOfRangeException(nameof(request.PaymentDueDay), "PaymentDueDay must be between 1 and 31");
         }
 
+        // 結帳日與繳款日同一天會造成跨月卡計算錯亂 直接擋下
+        // 訊息含 StatementDay 與 PaymentDueDay 字串 對齊 MapServiceErrorMessage 的中文 fallback
+        if (request.StatementDay == request.PaymentDueDay)
+        {
+            throw new ArgumentException("StatementDay and PaymentDueDay cannot be the same");
+        }
+
         var userExists = await dbContext.Users
             .AsNoTracking()
             .AnyAsync(x => x.Id == request.UserId, cancellationToken);

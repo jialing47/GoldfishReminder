@@ -13,6 +13,16 @@
     const historyMonthMap = settings.historyMonthMap;
     const banksMap = settings.banksMap || {};                                  // BankCode → BankName 映射 用於 modal 輸入代碼即時預覽銀行名
 
+    // 取第一個非 null / 非 undefined 值 代替 ?? 語法糖 用於 DOM getAttribute 等可能回 null 的 API
+    function FirstNonNull(value, fallback)
+    {
+        if (value === null || value === undefined)
+        {
+            return fallback;
+        }
+        return value;
+    }
+
     // 綁定銀行代碼 input 與 preview div 輸入時即時查 banksMap 顯示銀行名
     function AttachBankPreview(inputId, previewId)
     {
@@ -111,7 +121,7 @@
         }
     }
 
-    const initialHistoryMonth = historyMonthSelect?.value ?? "";
+    const initialHistoryMonth = FirstNonNull(historyMonthSelect?.value, "");
     renderHistoryMonths(initialHistoryMonth);
     historyYearSelect?.addEventListener("change", () => renderHistoryMonths(null));
 
@@ -142,7 +152,8 @@
 
         const impact = impactData.find(x =>
         {
-            const id = x.bankAccountId ?? x.BankAccountId;
+            // backend Settings.cshtml 強制 camelCase 序列化 直接讀 bankAccountId 即可
+            const id = x.bankAccountId;
             return typeof id === "string" && id.toLowerCase() === String(accountId).toLowerCase();
         });
 
@@ -152,25 +163,44 @@
             return;
         }
 
-        const details = impact.details ?? impact.Details ?? [];
-        const confirmedTotalAmount = impact.confirmedTotalAmount ?? impact.ConfirmedTotalAmount ?? 0;
-        const unconfirmedCount = impact.unconfirmedCount ?? impact.UnconfirmedCount ?? 0;
+        // AccountImpactSummary 後端保證 Details / ConfirmedTotalAmount / UnconfirmedCount 永不為 null
+        const details = impact.details;
+        const confirmedTotalAmount = impact.confirmedTotalAmount;
+        const unconfirmedCount = impact.unconfirmedCount;
         baImpactSummary.textContent = `已確認待扣總額 ${Number(confirmedTotalAmount).toLocaleString()} 元  未確認帳單 ${Number(unconfirmedCount)} 筆`;
 
         details.forEach(item =>
         {
             const li = document.createElement("li");
-            const bankCode = item.bankCode ?? item.BankCode ?? "";
-            const bankName = item.bankName ?? item.BankName ?? "";
-            const billYear = Number(item.billYear ?? item.BillYear ?? 0);
-            const billMonth = Number(item.billMonth ?? item.BillMonth ?? 0);
-            const paymentDueDay = Number(item.paymentDueDay ?? item.PaymentDueDay ?? 0);
-            const billAmount = item.billAmount ?? item.BillAmount;
-            const amountConfirmed = item.amountConfirmed ?? item.AmountConfirmed;
-            const bankText = bankName ? `${bankCode} ${bankName}` : bankCode;
-            const amountText = amountConfirmed && billAmount !== null && billAmount !== undefined
-                ? `${Number(billAmount).toLocaleString()} 元`
-                : "未確認";
+            // AccountImpactDetail 後端保證字串欄位最少為 string.Empty int 欄位永遠有值 唯 billAmount 為 int? 需特判
+            const bankCode = item.bankCode;
+            const bankName = item.bankName;
+            const billYear = Number(item.billYear);
+            const billMonth = Number(item.billMonth);
+            const paymentDueDay = Number(item.paymentDueDay);
+            const billAmount = item.billAmount;
+            const amountConfirmed = item.amountConfirmed;
+
+            let bankText; // 銀行顯示文字 BankName 為空時退化為純 BankCode
+            if (bankName)
+            {
+                bankText = `${bankCode} ${bankName}`;
+            }
+            else
+            {
+                bankText = bankCode;
+            }
+
+            let amountText; // 帳單金額顯示 未確認或 BillAmount 為 null 顯示「未確認」
+            if (amountConfirmed && billAmount !== null && billAmount !== undefined)
+            {
+                amountText = `${Number(billAmount).toLocaleString()} 元`;
+            }
+            else
+            {
+                amountText = "未確認";
+            }
+
             li.textContent = `${bankText} | ${billYear}/${String(billMonth).padStart(2, "0")} | ${amountText} | 繳費日 ${String(billMonth).padStart(2, "0")}/${String(paymentDueDay).padStart(2, "0")}`;
             baImpactDetails.appendChild(li);
         });
@@ -234,11 +264,11 @@
 
         baTitle.textContent = "編輯銀行帳戶";
         baId.value = id;
-        baBankCode.value = trigger.getAttribute("data-bankcode") ?? "";
-        baAccountName.value = trigger.getAttribute("data-accountname") ?? "";
-        baAccountType.value = trigger.getAttribute("data-accounttype") ?? "digital";
+        baBankCode.value = FirstNonNull(trigger.getAttribute("data-bankcode"), "");
+        baAccountName.value = FirstNonNull(trigger.getAttribute("data-accountname"), "");
+        baAccountType.value = FirstNonNull(trigger.getAttribute("data-accounttype"), "digital");
         baBalance.value = "";
-        const enabledText = trigger.getAttribute("data-enabled") ?? "true";
+        const enabledText = FirstNonNull(trigger.getAttribute("data-enabled"), "true");
         const wasEnabled = enabledText === "True" || enabledText === "true";
         baEnabled.checked = wasEnabled;
         editingBankEnabledBefore = wasEnabled;
@@ -282,11 +312,11 @@
 
         csTitle.textContent = "編輯信用卡設定";
         csId.value = id;
-        csBankCode.value = trigger.getAttribute("data-bankcode") ?? "";
-        csStatementDay.value = trigger.getAttribute("data-statementday") ?? "1";
-        csPaymentDueDay.value = trigger.getAttribute("data-paymentdueday") ?? "1";
-        csPaymentAccountId.value = trigger.getAttribute("data-paymentaccountid") ?? "";
-        const enabledText = trigger.getAttribute("data-enabled") ?? "true";
+        csBankCode.value = FirstNonNull(trigger.getAttribute("data-bankcode"), "");
+        csStatementDay.value = FirstNonNull(trigger.getAttribute("data-statementday"), "1");
+        csPaymentDueDay.value = FirstNonNull(trigger.getAttribute("data-paymentdueday"), "1");
+        csPaymentAccountId.value = FirstNonNull(trigger.getAttribute("data-paymentaccountid"), "");
+        const enabledText = FirstNonNull(trigger.getAttribute("data-enabled"), "true");
         csEnabled.checked = enabledText === "True" || enabledText === "true";
         csBankCode.dispatchEvent(new Event("input"));                          // 通知 bank-preview 重 render
     });
@@ -304,8 +334,8 @@
         const billId = trigger.getAttribute("data-billid");
         const billAmount = trigger.getAttribute("data-billamount");
 
-        cbBillId.value = billId ?? "";
-        cbBillAmount.value = billAmount ?? "0";
+        cbBillId.value = FirstNonNull(billId, "");
+        cbBillAmount.value = FirstNonNull(billAmount, "0");
         if (cbError)
         {
             cbError.classList.add("d-none");

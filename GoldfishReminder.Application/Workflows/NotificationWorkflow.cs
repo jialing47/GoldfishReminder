@@ -82,7 +82,17 @@ public class NotificationWorkflow
             }
         }
 
-        await sender.SendAsync(channelId, message, components, cancellationToken);
+        // 發送失敗也要寫 fail log 並 rethrow 給外層 try 紀錄 與 cache 不能在失敗時加入 否則下次 daily 不會 retry
+        try
+        {
+            await sender.SendAsync(channelId, message, components, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await logService.AddFailureAsync(userId, notificationType, targetId, message, ex.Message, nowUtc, cancellationToken);
+            throw;
+        }
+
         await logService.AddAsync(userId, notificationType, targetId, message, nowUtc, cancellationToken);
         cache.Add(cacheKey);
     }

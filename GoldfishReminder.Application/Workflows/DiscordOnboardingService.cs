@@ -90,10 +90,16 @@ public class DiscordOnboardingService : IDiscordOnboardingService
 
         if (user == null)
         {
+            string name = "DiscordUser";
+            if (!string.IsNullOrWhiteSpace(discordDisplayName))
+            {
+                name = discordDisplayName.Trim();
+            }
+
             return await userService.UpsertAsync(
                 new UpsertUserRequest
                 {
-                    Name = string.IsNullOrWhiteSpace(discordDisplayName) ? "DiscordUser" : discordDisplayName.Trim(),
+                    Name = name,
                     DiscordUserId = discordUserId
                 },
                 cancellationToken);

@@ -1,4 +1,6 @@
-﻿using GoldfishReminder.Application.Services;
+﻿using System.Security.Claims;
+using GoldfishReminder.Application.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -27,55 +29,40 @@ public class IndexModel : PageModel
             try
             {
                 var result = await webLinkTokenService.ConsumeAsync(token, cancellationToken);
-                Response.Cookies.Append(
-                    "gr_uid",
-                    result.UserId.ToString(),
-                    new CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = Request.IsHttps,
-                        SameSite = SameSiteMode.Lax,
-                        Expires = DateTimeOffset.UtcNow.AddHours(1)
-                    });
+
+                // 用 ClaimsPrincipal + SignInAsync 寫加密簽章 cookie 防止 cookie 被竄改 / 偽造 userId
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, result.UserId.ToString())
+                };
+                var identity = new ClaimsIdentity(claims, "gr");
+                var principal = new ClaimsPrincipal(identity);
+                await HttpContext.SignInAsync("gr", principal, new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1)
+                });
+
                 return Redirect(BuildSettingsUrl(tab));
             }
             catch
             {
-                // Consume 失敗 清掉殘留 cookie 並顯示錯誤
-                Response.Cookies.Append(
-                    "gr_uid",
-                    string.Empty,
-                    new CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = Request.IsHttps,
-                        SameSite = SameSiteMode.Lax,
-                        Expires = DateTimeOffset.UtcNow.AddDays(-1)
-                    });
+                // Consume 失敗 清掉殘留登入狀態並顯示錯誤
+                await HttpContext.SignOutAsync("gr");
                 ErrorMessage = "連結已失效或無效 請回 Discord 重新取得網頁連結";
                 return Page();
             }
         }
 
-        // 沒 token 但已有 cookie 直接跳 Settings
-        if (HasValidCookie())
+        // 沒 token 但已登入 直接跳 Settings
+        if (User.Identity != null && User.Identity.IsAuthenticated)
         {
             return Redirect(BuildSettingsUrl(tab));
         }
 
-        // 沒 token 沒 cookie 顯示 landing
+        // 沒 token 沒登入 顯示 landing
         ShowLanding = true;
         return Page();
-    }
-
-    // 檢查 cookie 是否包含有效 userId
-    private bool HasValidCookie()
-    {
-        if (!Request.Cookies.TryGetValue("gr_uid", out var userIdText))
-        {
-            return false;
-        }
-        return Guid.TryParse(userIdText, out _);
     }
 
     // 組成 Settings 頁網址 有指定 tab 就帶上

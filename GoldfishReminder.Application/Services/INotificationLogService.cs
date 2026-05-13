@@ -5,4 +5,5 @@ public interface INotificationLogService
 {
     Task<bool> HasSentTodayAsync(Guid userId, string notificationType, Guid targetId, DateTimeOffset nowUtc, CancellationToken cancellationToken = default);
     Task AddAsync(Guid userId, string notificationType, Guid targetId, string messageContent, DateTimeOffset sentAtUtc, CancellationToken cancellationToken = default);
+    Task AddFailureAsync(Guid userId, string notificationType, Guid targetId, string messageContent, string errorMessage, DateTimeOffset sentAtUtc, CancellationToken cancellationToken = default);
 }

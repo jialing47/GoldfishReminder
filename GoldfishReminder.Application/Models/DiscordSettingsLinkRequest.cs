@@ -7,5 +7,4 @@ public class DiscordSettingsLinkRequest
     public string InteractionToken { get; set; } = string.Empty;
     public string DiscordUserId { get; set; } = string.Empty;
     public string? DiscordDisplayName { get; set; }
-    public SettingsLinkReason Reason { get; set; }
 }

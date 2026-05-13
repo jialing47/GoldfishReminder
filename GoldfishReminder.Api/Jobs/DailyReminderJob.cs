@@ -1,6 +1,7 @@
 ﻿using GoldfishReminder.Application.Workflows;
 using GoldfishReminder.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace GoldfishReminder.Api.Jobs;
 
@@ -12,19 +13,44 @@ public class DailyReminderJob
 
     private readonly CreditBillWorkflow creditBillWorkflow;
     private readonly AppDbContext dbContext;
+    private readonly ILogger<DailyReminderJob> logger;
 
-    public DailyReminderJob(CreditBillWorkflow creditBillWorkflow, AppDbContext dbContext)
+    public DailyReminderJob(CreditBillWorkflow creditBillWorkflow, AppDbContext dbContext, ILogger<DailyReminderJob> logger)
     {
         this.creditBillWorkflow = creditBillWorkflow;
         this.dbContext = dbContext;
+        this.logger = logger;
     }
 
-    // 執行每日提醒並順便清理過期資料
+    // 執行每日提醒並順便清理過期資料 三件事獨立隔離 單一段失敗不影響後續
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
-        await creditBillWorkflow.RunDailyReminderAsync(cancellationToken);
-        await CleanupTokensAsync(cancellationToken);
-        await CleanupLogsAsync(cancellationToken);
+        try
+        {
+            await creditBillWorkflow.RunDailyReminderAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "RunDailyReminderAsync failed");
+        }
+
+        try
+        {
+            await CleanupTokensAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "CleanupTokensAsync failed");
+        }
+
+        try
+        {
+            await CleanupLogsAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "CleanupLogsAsync failed");
+        }
     }
 
     // 清除指定天數前已過期或已使用的 web link token

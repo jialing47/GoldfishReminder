@@ -14,26 +14,39 @@ public class SettingsPageService : ISettingsPageService
     private readonly IBankAccountService bankAccountService; // Bank account domain service
     private readonly ICreditSettingService creditSettingService; // Credit setting domain service
     private readonly CreditBillWorkflow creditBillWorkflow; // Bill workflow for unified decision/action
+    private readonly INotificationSender notificationSender; // 餘額/手動繳費警示主動推送私人頻道
 
     //初始化設定頁面服務相依物件
     public SettingsPageService(
         AppDbContext dbContext,
         IBankAccountService bankAccountService,
         ICreditSettingService creditSettingService,
-        CreditBillWorkflow creditBillWorkflow)
+        CreditBillWorkflow creditBillWorkflow,
+        INotificationSender notificationSender)
     {
         this.dbContext = dbContext;
         this.bankAccountService = bankAccountService;
         this.creditSettingService = creditSettingService;
         this.creditBillWorkflow = creditBillWorkflow;
+        this.notificationSender = notificationSender;
     }
 
     //載入設定頁面資料
     public async Task<SettingsPageData> GetPageDataAsync(Guid userId, int? historyYear = null, int? historyMonth = null, CancellationToken cancellationToken = default)
     {
         var now = TaiwanClock.GetToday();
-        var selectedHistoryYear = historyYear ?? now.Year;
-        var selectedHistoryMonth = historyMonth ?? now.Month;
+
+        var selectedHistoryYear = now.Year;
+        if (historyYear.HasValue)
+        {
+            selectedHistoryYear = historyYear.Value;
+        }
+
+        var selectedHistoryMonth = now.Month;
+        if (historyMonth.HasValue)
+        {
+            selectedHistoryMonth = historyMonth.Value;
+        }
 
         var banks = await dbContext.Banks
             .AsNoTracking()
@@ -127,7 +140,7 @@ public class SettingsPageService : ISettingsPageService
             {
                 Id = x.Snapshot.Id,
                 BankCode = x.Snapshot.BankCode,
-                BankName = bankNameByCode.TryGetValue(x.Snapshot.BankCode, out var bankName) ? bankName : string.Empty,
+                BankName = bankNameByCode.GetValueOrDefault(x.Snapshot.BankCode, string.Empty),
                 BillYear = x.Snapshot.BillYear,
                 BillMonth = x.Snapshot.BillMonth,
                 PaymentDueDay = x.Snapshot.PaymentDueDay,
@@ -171,7 +184,7 @@ public class SettingsPageService : ISettingsPageService
             {
                 Id = x.Id,
                 BankCode = x.BankCode,
-                BankName = bankNameByCode.TryGetValue(x.BankCode, out var bankName) ? bankName : string.Empty,
+                BankName = bankNameByCode.GetValueOrDefault(x.BankCode, string.Empty),
                 BillYear = x.BillYear,
                 BillMonth = x.BillMonth,
                 BillAmount = x.BillAmount,
@@ -297,7 +310,31 @@ public class SettingsPageService : ISettingsPageService
             throw new InvalidOperationException("找不到可更新的本月待繳帳單");
         }
 
-        await creditBillWorkflow.ConfirmBillAmountAsync(input.BillId, userId, input.BillAmount, cancellationToken);
+        var action = await creditBillWorkflow.ConfirmBillAmountAsync(input.BillId, userId, input.BillAmount, cancellationToken);
+
+        await DispatchActionMessageAsync(userId, action, cancellationToken);
+    }
+
+    //帳單金額確認後若 action 屬於警示類型 主動發訊息至使用者私人頻道 對齊 Discord modal 路徑體驗
+    private async Task DispatchActionMessageAsync(Guid userId, WorkflowAction action, CancellationToken cancellationToken)
+    {
+        if (action.ActionType != BillActionType.PromptManualPay
+            && action.ActionType != BillActionType.AccountInsufficientBalance)
+        {
+            return;
+        }
+
+        var channelId = await dbContext.Users.AsNoTracking()
+            .Where(x => x.Id == userId)
+            .Select(x => x.DiscordPrivateChannelId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(channelId))
+        {
+            return;
+        }
+
+        await notificationSender.SendAsync(channelId, action.Message, action.Components, cancellationToken);
     }
 
     //建立扣款帳戶名稱
@@ -308,7 +345,7 @@ public class SettingsPageService : ISettingsPageService
             return string.Empty;
         }
 
-        return paymentAccountNameById.TryGetValue(paymentAccountId.Value, out var paymentAccountName) ? paymentAccountName : string.Empty;
+        return paymentAccountNameById.GetValueOrDefault(paymentAccountId.Value, string.Empty);
     }
 
     //建立帳戶扣款影響資料
@@ -354,7 +391,7 @@ public class SettingsPageService : ISettingsPageService
                 {
                     CreditBillId = x.Id,
                     BankCode = x.BankCode,
-                    BankName = bankNameByCode.TryGetValue(x.BankCode, out var bankName) ? bankName : string.Empty,
+                    BankName = bankNameByCode.GetValueOrDefault(x.BankCode, string.Empty),
                     BillYear = x.BillYear,
                     BillMonth = x.BillMonth,
                     PaymentDueDay = x.PaymentDueDay,
@@ -416,7 +453,12 @@ public class SettingsPageService : ISettingsPageService
     //帳戶類型顯示文字
     private static string GetAccountTypeText(string? accountType)
     {
-        var normalized = (accountType ?? string.Empty).Trim().ToLowerInvariant();
+        var rawAccountType = accountType;
+        if (rawAccountType == null)
+        {
+            rawAccountType = string.Empty;
+        }
+        var normalized = rawAccountType.Trim().ToLowerInvariant();
 
         if (normalized == "digital")
         {
@@ -428,7 +470,7 @@ public class SettingsPageService : ISettingsPageService
             return "實體帳戶";
         }
 
-        return accountType ?? string.Empty;
+        return rawAccountType;
     }
 
     //解析可空整數

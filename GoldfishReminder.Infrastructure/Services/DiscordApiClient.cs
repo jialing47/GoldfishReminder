@@ -10,6 +10,9 @@ namespace GoldfishReminder.Infrastructure.Services;
 //Discord API 用戶端實作
 public class DiscordApiClient : IDiscordApiClient
 {
+    private const int MaxErrorBodyLength = 200; // Discord 失敗回應 body 截斷上限 避免敏感或過長內容進入 log
+    private const int EphemeralFlag = 64;       // Discord ephemeral 訊息 flag
+
     private readonly HttpClient httpClient;
     private readonly DiscordOptions discordOptions;
 
@@ -30,7 +33,7 @@ public class DiscordApiClient : IDiscordApiClient
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException($"Discord GET failed. Status:{(int)response.StatusCode} Body:{text}");
+            throw new InvalidOperationException($"Discord GET failed. Status:{(int)response.StatusCode} Body:{TruncateErrorBody(text)}");
         }
 
         using var document = JsonDocument.Parse(text);
@@ -49,7 +52,7 @@ public class DiscordApiClient : IDiscordApiClient
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException($"Discord POST failed. Status:{(int)response.StatusCode} Body:{text}");
+            throw new InvalidOperationException($"Discord POST failed. Status:{(int)response.StatusCode} Body:{TruncateErrorBody(text)}");
         }
 
         using var document = JsonDocument.Parse(text);
@@ -60,10 +63,17 @@ public class DiscordApiClient : IDiscordApiClient
     public async Task SendFollowupAsync(string applicationId, string interactionToken, string content, bool isEphemeral, CancellationToken cancellationToken = default)
     {
         var url = $"https://discord.com/api/v10/webhooks/{applicationId}/{interactionToken}";
+
+        var flags = 0;
+        if (isEphemeral)
+        {
+            flags = EphemeralFlag;
+        }
+
         var payload = new
         {
             content,
-            flags = isEphemeral ? 64 : 0
+            flags
         };
 
         await PostJsonAsync(url, payload, cancellationToken);
@@ -74,5 +84,21 @@ public class DiscordApiClient : IDiscordApiClient
     {
         var url = $"https://discord.com/api/v10/channels/{channelId}/messages";
         await PostJsonAsync(url, payload, cancellationToken);
+    }
+
+    //截斷 Discord 錯誤回應 body 避免長 body 或敏感內容直接寫入 log
+    private static string TruncateErrorBody(string body)
+    {
+        if (string.IsNullOrEmpty(body))
+        {
+            return string.Empty;
+        }
+
+        if (body.Length <= MaxErrorBodyLength)
+        {
+            return body;
+        }
+
+        return body.Substring(0, MaxErrorBodyLength) + "...(truncated)";
     }
 }

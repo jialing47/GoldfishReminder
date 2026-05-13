@@ -1,4 +1,5 @@
-﻿using GoldfishReminder.Application;
+﻿using System.Security.Claims;
+using GoldfishReminder.Application;
 using GoldfishReminder.Application.Models;
 using GoldfishReminder.Application.Services;
 using GoldfishReminder.Application.Workflows;
@@ -141,27 +142,27 @@ public class SettingsModel : PageModel
             var input = new BankAccountInputModel
             {
                 Id = BankAccountForm.Id,
-                BankCode = (BankAccountForm.BankCode ?? string.Empty).Trim(),
-                AccountName = (BankAccountForm.AccountName ?? string.Empty).Trim(),
-                AccountType = (BankAccountForm.AccountType ?? string.Empty).Trim(),
+                BankCode = TrimOrEmpty(BankAccountForm.BankCode),
+                AccountName = TrimOrEmpty(BankAccountForm.AccountName),
+                AccountType = TrimOrEmpty(BankAccountForm.AccountType),
                 Balance = BankAccountForm.Balance,
                 Enabled = Request.Form.ContainsKey("BankAccountForm.Enabled")
             };
 
             if (string.IsNullOrWhiteSpace(input.BankCode))
             {
-                return BankAccountBadRequest("銀行代碼不可為空白");
+                return await BankAccountBadRequestAsync("銀行代碼不可為空白");
             }
 
             if (string.IsNullOrWhiteSpace(input.AccountName))
             {
-                return BankAccountBadRequest("帳戶名稱不可為空白");
+                return await BankAccountBadRequestAsync("帳戶名稱不可為空白");
             }
 
             if (!string.Equals(input.AccountType, "digital", StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(input.AccountType, "physical", StringComparison.OrdinalIgnoreCase))
             {
-                return BankAccountBadRequest("帳戶類型只接受 digital 或 physical");
+                return await BankAccountBadRequestAsync("帳戶類型只接受 digital 或 physical");
             }
 
             await settingsPageService.SaveBankAccountAsync(userId, input, cancellationToken);
@@ -175,15 +176,15 @@ public class SettingsModel : PageModel
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            return BankAccountBadRequest(MapServiceErrorMessage(ex, "儲存銀行帳戶失敗 請稍後再試"));
+            return await BankAccountBadRequestAsync(MapServiceErrorMessage(ex, "儲存銀行帳戶失敗 請稍後再試"));
         }
         catch
         {
-            return BankAccountBadRequest("儲存銀行帳戶失敗 請稍後再試");
+            return await BankAccountBadRequestAsync("儲存銀行帳戶失敗 請稍後再試");
         }
 
         // 回傳銀行帳戶表單錯誤
-        IActionResult BankAccountBadRequest(string message)
+        async Task<IActionResult> BankAccountBadRequestAsync(string message)
         {
             if (isAjaxRequest)
             {
@@ -192,7 +193,7 @@ public class SettingsModel : PageModel
             }
 
             AlertMessage = message;
-            LoadDataAsync(userId, historyYear, historyMonth, cancellationToken).GetAwaiter().GetResult();
+            await LoadDataAsync(userId, historyYear, historyMonth, cancellationToken);
             return Page();
         }
     }
@@ -213,7 +214,7 @@ public class SettingsModel : PageModel
             var input = new CreditSettingInputModel
             {
                 Id = CreditSettingForm.Id,
-                BankCode = (CreditSettingForm.BankCode ?? string.Empty).Trim(),
+                BankCode = TrimOrEmpty(CreditSettingForm.BankCode),
                 StatementDay = CreditSettingForm.StatementDay,
                 PaymentDueDay = CreditSettingForm.PaymentDueDay,
                 PaymentBankAccountId = CreditSettingForm.PaymentBankAccountId,
@@ -222,17 +223,17 @@ public class SettingsModel : PageModel
 
             if (string.IsNullOrWhiteSpace(input.BankCode))
             {
-                return CreditSettingBadRequest("銀行代碼不可為空白");
+                return await CreditSettingBadRequestAsync("銀行代碼不可為空白");
             }
 
             if (input.StatementDay < 1 || input.StatementDay > 31)
             {
-                return CreditSettingBadRequest("結帳日需介於 1 到 31");
+                return await CreditSettingBadRequestAsync("結帳日需介於 1 到 31");
             }
 
             if (input.PaymentDueDay < 1 || input.PaymentDueDay > 31)
             {
-                return CreditSettingBadRequest("繳費日需介於 1 到 31");
+                return await CreditSettingBadRequestAsync("繳費日需介於 1 到 31");
             }
 
             await settingsPageService.SaveCreditSettingAsync(userId, input, cancellationToken);
@@ -246,15 +247,15 @@ public class SettingsModel : PageModel
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            return CreditSettingBadRequest(MapServiceErrorMessage(ex, "儲存信用卡設定失敗 請稍後再試"));
+            return await CreditSettingBadRequestAsync(MapServiceErrorMessage(ex, "儲存信用卡設定失敗 請稍後再試"));
         }
         catch
         {
-            return CreditSettingBadRequest("儲存信用卡設定失敗 請稍後再試");
+            return await CreditSettingBadRequestAsync("儲存信用卡設定失敗 請稍後再試");
         }
 
         // 回傳信用卡設定表單錯誤
-        IActionResult CreditSettingBadRequest(string message)
+        async Task<IActionResult> CreditSettingBadRequestAsync(string message)
         {
             if (isAjaxRequest)
             {
@@ -263,7 +264,7 @@ public class SettingsModel : PageModel
             }
 
             AlertMessage = message;
-            LoadDataAsync(userId, historyYear, historyMonth, cancellationToken).GetAwaiter().GetResult();
+            await LoadDataAsync(userId, historyYear, historyMonth, cancellationToken);
             return Page();
         }
     }
@@ -283,12 +284,12 @@ public class SettingsModel : PageModel
         {
             if (!CurrentBillAmountForm.BillId.HasValue || CurrentBillAmountForm.BillId.Value == Guid.Empty)
             {
-                return CurrentBillAmountBadRequest("帳單 Id 不可為空白");
+                return await CurrentBillAmountBadRequestAsync("帳單 Id 不可為空白");
             }
 
             if (CurrentBillAmountForm.BillAmount < 0)
             {
-                return CurrentBillAmountBadRequest("帳單金額不可小於 0");
+                return await CurrentBillAmountBadRequestAsync("帳單金額不可小於 0");
             }
 
             var input = new UpdateBillAmountInput
@@ -308,15 +309,15 @@ public class SettingsModel : PageModel
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            return CurrentBillAmountBadRequest(MapServiceErrorMessage(ex, "更新帳單金額失敗"));
+            return await CurrentBillAmountBadRequestAsync(MapServiceErrorMessage(ex, "更新帳單金額失敗"));
         }
         catch
         {
-            return CurrentBillAmountBadRequest("更新帳單金額失敗");
+            return await CurrentBillAmountBadRequestAsync("更新帳單金額失敗");
         }
 
         // 回傳本月帳單金額表單錯誤
-        IActionResult CurrentBillAmountBadRequest(string message)
+        async Task<IActionResult> CurrentBillAmountBadRequestAsync(string message)
         {
             if (isAjaxRequest)
             {
@@ -325,7 +326,7 @@ public class SettingsModel : PageModel
             }
 
             AlertMessage = message;
-            LoadDataAsync(userId, historyYear, historyMonth, cancellationToken).GetAwaiter().GetResult();
+            await LoadDataAsync(userId, historyYear, historyMonth, cancellationToken);
             return Page();
         }
     }
@@ -345,7 +346,7 @@ public class SettingsModel : PageModel
         {
             if (billId == Guid.Empty)
             {
-                return MarkPaidBadRequest("帳單資料錯誤");
+                return await MarkPaidBadRequestAsync("帳單資料錯誤");
             }
 
             await creditBillWorkflow.MarkBillPaidAsync(billId, userId, cancellationToken);
@@ -357,12 +358,18 @@ public class SettingsModel : PageModel
 
             return Redirect(BuildRedirectUrl("currentBills", historyYear, historyMonth));
         }
+        catch (UnauthorizedAccessException)
+        {
+            // billId 不屬於目前登入 user 的 IDOR 嘗試 給明確訊息避免誤導為系統失敗
+            return await MarkPaidBadRequestAsync("此帳單不屬於你");
+        }
         catch
         {
-            return MarkPaidBadRequest("設定已繳費失敗");
+            return await MarkPaidBadRequestAsync("設定已繳費失敗");
         }
 
-        IActionResult MarkPaidBadRequest(string message)
+        // 回傳標記繳費表單錯誤
+        async Task<IActionResult> MarkPaidBadRequestAsync(string message)
         {
             if (isAjaxRequest)
             {
@@ -371,7 +378,7 @@ public class SettingsModel : PageModel
             }
 
             AlertMessage = message;
-            LoadDataAsync(userId, historyYear, historyMonth, cancellationToken).GetAwaiter().GetResult();
+            await LoadDataAsync(userId, historyYear, historyMonth, cancellationToken);
             return Page();
         }
     }
@@ -412,17 +419,28 @@ public class SettingsModel : PageModel
         return string.Equals(Request.Headers["X-Requested-With"].ToString(), "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
     }
 
-    // 從 cookie 解析 userId
+    // 從已認證的 Claims 取得 userId
     private bool TryGetUserIdFromCookie(out Guid userId)
     {
         userId = Guid.Empty;
 
-        if (!Request.Cookies.TryGetValue("gr_uid", out var userIdText))
+        var userIdText = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userIdText == null)
         {
             return false;
         }
 
         return Guid.TryParse(userIdText, out userId);
+    }
+
+    // nullable string 轉成非 null 並 trim 給 form binding 共用
+    private static string TrimOrEmpty(string? value)
+    {
+        if (value == null)
+        {
+            return string.Empty;
+        }
+        return value.Trim();
     }
 
     // 正規化 tab 名稱
@@ -460,7 +478,11 @@ public class SettingsModel : PageModel
     // 將服務層拋出的英文錯誤訊息對應到中文 user-friendly 訊息 找不到對應就用預設訊息
     private static string MapServiceErrorMessage(Exception ex, string defaultMessage)
     {
-        var message = ex.Message ?? string.Empty;
+        var message = ex.Message;
+        if (message == null)
+        {
+            message = string.Empty;
+        }
 
         if (message.Contains("Bank does not exist"))
         {

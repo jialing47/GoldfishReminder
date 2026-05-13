@@ -17,6 +17,38 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Authentication 用內建簽章加密 cookie 防止 cookie 被竄改 / 偽造 userId
+builder.Services.AddAuthentication("gr")
+    .AddCookie("gr", options =>
+    {
+        options.Cookie.Name = "gr_auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.ExpireTimeSpan = TimeSpan.FromHours(1);
+        options.SlidingExpiration = false;
+        options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
+        {
+            OnRedirectToLogin = ctx =>
+            {
+                // Ajax 回 401 JSON 一般頁面導回首頁
+                if (string.Equals(ctx.Request.Headers["X-Requested-With"].ToString(), "XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.Response.StatusCode = 401;
+                    return ctx.Response.WriteAsJsonAsync(new { ok = false, message = "尚未登入 請回 Discord 重新開啟網頁連結" });
+                }
+                ctx.Response.Redirect("/");
+                return Task.CompletedTask;
+            },
+            OnRedirectToAccessDenied = ctx =>
+            {
+                ctx.Response.StatusCode = 403;
+                return Task.CompletedTask;
+            }
+        };
+    });
+builder.Services.AddAuthorization();
+
 // PostgreSQL DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -26,8 +58,12 @@ builder.Services.Configure<WebOptions>(builder.Configuration.GetSection("Web"));
 builder.Services.Configure<DiscordOptions>(builder.Configuration.GetSection("Discord"));
 builder.Services.Configure<JobsOptions>(builder.Configuration.GetSection("Jobs"));
 
-// 外部 API client
-builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>();
+// 外部 API client 設 10 秒 timeout 避免 Discord API 卡住吃掉 background task slot 與 daily job
+// Discord 正常 100-300ms 完成 10 秒已涵蓋極端情況
+builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 
 // 基礎 provider / verifier
 builder.Services.AddSingleton<IWebUrlProvider, WebUrlProvider>();
@@ -91,6 +127,8 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 // 路由
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.MapRazorPages();
 

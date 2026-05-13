@@ -125,8 +125,7 @@ public class DiscordInteractionsController : ControllerBase
                             ApplicationId = applicationId,
                             InteractionToken = interactionToken,
                             DiscordUserId = discordUserId,
-                            DiscordDisplayName = discordDisplayName,
-                            Reason = SettingsLinkReason.Manual
+                            DiscordDisplayName = discordDisplayName
                         },
                         stoppingToken);
                 });
@@ -168,11 +167,7 @@ public class DiscordInteractionsController : ControllerBase
                     return Ok(BuildEphemeralMessage("此帳單不屬於你"));
                 }
 
-                return Ok(new
-                {
-                    type = 4,
-                    data = new { content = "已標記為繳費完成" }
-                });
+                return Ok(BuildEphemeralMessage("已標記為繳費完成"));
             }
 
             if (customId.StartsWith(BillAmountPrefix, StringComparison.Ordinal))
@@ -378,13 +373,27 @@ public class DiscordInteractionsController : ControllerBase
         return billAmount >= 0;
     }
 
-    // 建立 workflow 回覆
+    // 建立 workflow 回覆 ActionType=None 為純成功訊息用 ephemeral 避免頻道噪音 其他類型含按鈕或警告維持永久訊息
     private static object BuildWorkflowResponse(WorkflowAction action)
     {
         var components = action.Components;
         if (components == null)
         {
             components = Array.Empty<object>();
+        }
+
+        if (action.ActionType == BillActionType.None)
+        {
+            return new
+            {
+                type = 4,
+                data = new
+                {
+                    content = action.Message,
+                    components = components,
+                    flags = 64
+                }
+            };
         }
 
         return new

@@ -9,6 +9,8 @@ namespace GoldfishReminder.Infrastructure.Services;
 // 通知紀錄服務實作
 public class NotificationLogService : INotificationLogService
 {
+    private const int MaxErrorMessageLength = 500; // 失敗訊息存入 DB 前截斷上限 避免長 stack trace 撐爆 row
+
     private readonly AppDbContext dbContext;
 
     public NotificationLogService(AppDbContext dbContext)
@@ -33,10 +35,36 @@ public class NotificationLogService : INotificationLogService
                 cancellationToken);
     }
 
-    // 新增通知紀錄
+    // 新增成功通知紀錄
     public async Task AddAsync(Guid userId, string notificationType, Guid targetId, string messageContent, DateTimeOffset sentAtUtc, CancellationToken cancellationToken = default)
     {
-        var notificationLog = new NotificationLog
+        var notificationLog = BuildLog(userId, notificationType, targetId, messageContent, sentAtUtc, "success", null);
+        dbContext.NotificationLogs.Add(notificationLog);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    // 新增失敗通知紀錄 errorMessage 截斷至 500 字 避免極長 stack trace 撐爆 row
+    public async Task AddFailureAsync(Guid userId, string notificationType, Guid targetId, string messageContent, string errorMessage, DateTimeOffset sentAtUtc, CancellationToken cancellationToken = default)
+    {
+        var truncated = errorMessage; // 截斷後的錯誤訊息
+        if (truncated == null)
+        {
+            truncated = string.Empty;
+        }
+        if (truncated.Length > MaxErrorMessageLength)
+        {
+            truncated = truncated.Substring(0, MaxErrorMessageLength);
+        }
+
+        var notificationLog = BuildLog(userId, notificationType, targetId, messageContent, sentAtUtc, "fail", truncated);
+        dbContext.NotificationLogs.Add(notificationLog);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    // 建立通知紀錄 entity 抽共用避免兩個 Add 路徑分歧
+    private static NotificationLog BuildLog(Guid userId, string notificationType, Guid targetId, string messageContent, DateTimeOffset sentAtUtc, string status, string? errorMessage)
+    {
+        return new NotificationLog
         {
             Id = Guid.NewGuid(),
             UserId = userId,
@@ -44,10 +72,8 @@ public class NotificationLogService : INotificationLogService
             TargetId = targetId,
             MessageContent = messageContent,
             SentAt = sentAtUtc.ToUniversalTime(),
-            Status = "success"
+            Status = status,
+            ErrorMessage = errorMessage
         };
-
-        dbContext.NotificationLogs.Add(notificationLog);
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

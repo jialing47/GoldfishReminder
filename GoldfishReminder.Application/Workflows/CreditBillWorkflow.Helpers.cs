@@ -6,6 +6,9 @@ namespace GoldfishReminder.Application.Workflows;
 // CreditBillWorkflow 的私有 helper 與內部型別拆檔 邏輯完全不變
 public partial class CreditBillWorkflow
 {
+    // 過繳費日寬限天數 超過後停用該 user 全部信用卡提醒 寬限期內仍允許自動扣款
+    public const int OverdueGracePeriodDays = 7;
+
     // 建立帳戶群組
     private static List<AccountGroup> BuildGroups(IReadOnlyList<CreditBill> creditBills, IReadOnlyDictionary<(Guid userId, string bankCode), CreditSetting> creditSettings, IReadOnlyDictionary<string, Bank> banks, IReadOnlyDictionary<Guid, PaymentAccountSnapshot> paymentAccounts)
     {
@@ -158,12 +161,12 @@ public partial class CreditBillWorkflow
         var dueDate = GetDueDate(creditBill);
         var statementDate = GetStatementDate(creditBill);
 
-        if (today > dueDate.AddDays(14))
+        if (today > dueDate.AddDays(OverdueGracePeriodDays))
         {
             return BillActionType.DisableReminder;
         }
 
-        // 到繳費日或過繳費日且足額都要自動扣款 允許 dueDate 後 14 天內補扣
+        // 到繳費日或過繳費日且足額都要自動扣款 允許 dueDate 後寬限期內補扣
         if (today >= dueDate
             && creditBill.AmountConfirmed
             && balance.HasPaymentAccount

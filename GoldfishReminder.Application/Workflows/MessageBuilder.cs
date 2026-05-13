@@ -111,7 +111,15 @@ public static class MessageBuilder
                 amount = bill.BillAmount.Value;
             }
 
-            var status = bill.AmountConfirmed ? "已確認" : "未確認";
+            string status;
+            if (bill.AmountConfirmed)
+            {
+                status = "已確認";
+            }
+            else
+            {
+                status = "未確認";
+            }
             stringBuilder.AppendLine("- " + bill.BillYear + "/" + bill.BillMonth + " " + bank.BankName + "：" + amount.ToString("N0") + "(" + status + ")");
         }
 
@@ -139,6 +147,6 @@ public static class MessageBuilder
     // 建立停用提醒訊息
     public static string DisabledText()
     {
-        return "提醒已停用\n超過繳費日 14 天仍未處理，已停用此使用者全部信用卡提醒。";
+        return $"提醒已停用\n超過繳費日 {CreditBillWorkflow.OverdueGracePeriodDays} 天仍未處理，已停用此使用者全部信用卡提醒。";
     }
 }

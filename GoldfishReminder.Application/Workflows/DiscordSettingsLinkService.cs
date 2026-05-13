@@ -53,9 +53,7 @@ public class DiscordSettingsLinkService : IDiscordSettingsLinkService
             },
             cancellationToken);
 
-        var followupMessage = request.Reason == SettingsLinkReason.Start
-            ? $"已建立/確認你的私人提醒頻道：<#{user.DiscordPrivateChannelId}>，並已發送網頁連結。"
-            : $"已發送網頁連結到你的私人提醒頻道：<#{user.DiscordPrivateChannelId}>。";
+        var followupMessage = $"已發送網頁連結到你的私人提醒頻道：<#{user.DiscordPrivateChannelId}>。";
 
         await discordApiClient.SendFollowupAsync(request.ApplicationId, request.InteractionToken, followupMessage, true, cancellationToken);
     }

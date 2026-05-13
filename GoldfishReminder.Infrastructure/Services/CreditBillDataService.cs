@@ -30,8 +30,18 @@ public class CreditBillDataService : ICreditBillDataService
             .ToListAsync(cancellationToken);
 
         // 上個月年月 跨月卡若今日在繳款日前 本月帳單尚未補建 要補上個月那張
-        var prevYear = today.Month == 1 ? today.Year - 1 : today.Year;
-        var prevMonth = today.Month == 1 ? 12 : today.Month - 1;
+        int prevYear;
+        int prevMonth;
+        if (today.Month == 1)
+        {
+            prevYear = today.Year - 1;
+            prevMonth = 12;
+        }
+        else
+        {
+            prevYear = today.Year;
+            prevMonth = today.Month - 1;
+        }
         var prevDaysInMonth = DateTime.DaysInMonth(prevYear, prevMonth);
 
         var candidates = new List<TodayBillCandidate>();

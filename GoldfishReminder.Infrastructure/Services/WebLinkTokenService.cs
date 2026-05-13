@@ -31,8 +31,6 @@ public class WebLinkTokenService : IWebLinkTokenService
         var token = Base64UrlEncode(tokenBytes);
         var tokenHash = Sha256Hex(token);
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-
         var activeTokens = await dbContext.WebLinkTokens
             .Where(x => x.UserId == userId && x.UsedAt == null)
             .ToListAsync(cancellationToken);
@@ -53,7 +51,6 @@ public class WebLinkTokenService : IWebLinkTokenService
         });
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
 
         return new WebLinkTokenResult
         {

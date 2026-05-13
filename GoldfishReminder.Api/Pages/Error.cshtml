@@ -2,7 +2,15 @@
 @model GoldfishReminder.Api.Pages.ErrorModel
 @{
     Layout = null;
-    var pageTitle = Model.IsNotFound ? "找不到頁面" : "發生錯誤";
+    string pageTitle;
+    if (Model.IsNotFound)
+    {
+        pageTitle = "找不到頁面";
+    }
+    else
+    {
+        pageTitle = "發生錯誤";
+    }
 }
 <!DOCTYPE html>
 <html lang="zh-Hant">
