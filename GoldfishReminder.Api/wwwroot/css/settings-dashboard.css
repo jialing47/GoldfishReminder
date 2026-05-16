@@ -63,15 +63,15 @@
 .gf-dash-rows-bank .gf-dash-row-head,
 .gf-dash-rows-bank .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) 1.3fr .9fr 1fr 1fr var(--col-action); gap: 12px; }
 .gf-dash-rows-card .gf-dash-row-head,
-.gf-dash-rows-card .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) 1fr 1fr 1.5fr var(--col-action); gap: 12px; }
+.gf-dash-rows-card .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) 1.5fr 1fr 1fr var(--col-action); gap: 12px; }
 .gf-dash-rows-bill .gf-dash-row-head,
-.gf-dash-rows-bill .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) .9fr 1.2fr 1fr var(--col-action); gap: 12px; }
+.gf-dash-rows-bill .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) 1.2fr .9fr 1.2fr 1fr var(--col-action); gap: 12px; }
 .gf-dash-rows-hist .gf-dash-row-head,
 .gf-dash-rows-hist .gf-dash-row { display: grid; grid-template-columns: var(--col-bank) .9fr 1.2fr 1fr; gap: 12px; }
 
-/* === 待繳/歷史 金額 cell 右側預留空白 避免金額右緣與狀態左緣貼太近 === */
-.gf-dash-rows-bill .gf-dash-row-head > div:nth-child(3),
-.gf-dash-rows-bill .gf-dash-row > div:nth-child(3),
+/* === 待繳/歷史 金額 cell 右側預留空白 避免金額右緣與狀態左緣貼太近 待繳金額在第 4 欄 歷史在第 3 欄 === */
+.gf-dash-rows-bill .gf-dash-row-head > div:nth-child(4),
+.gf-dash-rows-bill .gf-dash-row > div:nth-child(4),
 .gf-dash-rows-hist .gf-dash-row-head > div:nth-child(3),
 .gf-dash-rows-hist .gf-dash-row > div:nth-child(3) { padding-right: 32px; }
 
@@ -320,17 +320,16 @@
         grid-template-columns: 60px 1fr;
     }
 
-    /* 信用卡 tab cell label */
-    .gf-dash-rows-card .gf-dash-row > div:nth-child(2)::before { content: "結帳日"; }
-    .gf-dash-rows-card .gf-dash-row > div:nth-child(3)::before { content: "繳費日"; }
-    .gf-dash-rows-card .gf-dash-row > div:nth-child(4)::before { content: "自動扣繳"; }
+    /* 信用卡 tab cell label 扣款帳戶 cell(2) 已在 bank-info 顯示 故 hide 結帳日(3) 繳費日(4) 並排 */
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(3)::before { content: "結帳日"; }
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(4)::before { content: "繳費日"; }
 
-    /* 信用卡 row 改 grid 2 欄 讓結帳日 + 繳費日並排 自動扣繳已移到 bank-info 副標位置 故第 4 cell 隱藏 */
+    /* 信用卡 row 改 grid 2 欄 讓結帳日 + 繳費日並排 扣款已移到 bank-info 副標位置 故第 2 cell 隱藏 */
     .gf-dash-rows-card .gf-dash-row { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; row-gap: 0; }
     .gf-dash-rows-card .gf-dash-row > div:first-child { grid-column: 1 / -1; }
-    .gf-dash-rows-card .gf-dash-row > div:nth-child(4) { display: none !important; }   /* 自動扣繳 cell 隱藏 已在 bank-info 內顯示 */
-    .gf-dash-rows-card .gf-dash-row > div:nth-child(2),
-    .gf-dash-rows-card .gf-dash-row > div:nth-child(3) {
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(2) { display: none !important; }   /* 扣款 cell 隱藏 已在 bank-info 內顯示 */
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(3),
+    .gf-dash-rows-card .gf-dash-row > div:nth-child(4) {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 2px;
@@ -345,24 +344,40 @@
     .gf-dash-rows-card .gf-dash-bank-pay { font-size: 12.5px; color: var(--muted-color); font-weight: 400; }
     .gf-dash-rows-card .gf-dash-bank-pay.gf-dash-pay-acct-warn { color: #B47A1A; font-weight: 500; }
 
-    /* 待繳 tab cell label */
-    .gf-dash-rows-bill .gf-dash-row > div:nth-child(2)::before { content: "繳費日"; }
-    .gf-dash-rows-bill .gf-dash-row > div:nth-child(3)::before { content: "帳單金額"; }
-    .gf-dash-rows-bill .gf-dash-row > div:nth-child(4)::before { content: "狀態"; }
+    /* 待繳 tab cell label 扣款帳戶 cell(2) 已在 bank-info 顯示 故 hide 繳費日(3) 金額(4) 狀態(5) 3 col 並排 */
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(3)::before { content: "繳費日"; }
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(4)::before { content: "帳單金額"; }
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(5)::before { content: "狀態"; }
 
-    /* 歷史 tab cell label */
+    /* 歷史 tab cell label 仍 4 個 cell */
     .gf-dash-rows-hist .gf-dash-row > div:nth-child(2)::before { content: "繳費日"; }
     .gf-dash-rows-hist .gf-dash-row > div:nth-child(3)::before { content: "帳單金額"; }
     .gf-dash-rows-hist .gf-dash-row > div:nth-child(4)::before { content: "狀態"; }
 
-    /* 待繳 + 歷史 row 改 grid 3 欄 繳費日 + 帳單金額 + 狀態 並排 編輯按鈕仍 absolute */
-    .gf-dash-rows-bill .gf-dash-row,
-    .gf-dash-rows-hist .gf-dash-row { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 8px; row-gap: 0; }
-    .gf-dash-rows-bill .gf-dash-row > div:first-child,
-    .gf-dash-rows-hist .gf-dash-row > div:first-child { grid-column: 1 / -1; }
-    .gf-dash-rows-bill .gf-dash-row > div:nth-child(2),
+    /* 待繳 row 改 grid 3 欄 繳費日 + 金額 + 狀態 並排 扣款已移到 bank-info 副標位置 故第 2 cell 隱藏 */
+    .gf-dash-rows-bill .gf-dash-row { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 8px; row-gap: 0; }
+    .gf-dash-rows-bill .gf-dash-row > div:first-child { grid-column: 1 / -1; }
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(2) { display: none !important; }   /* 扣款 cell 隱藏 */
     .gf-dash-rows-bill .gf-dash-row > div:nth-child(3),
     .gf-dash-rows-bill .gf-dash-row > div:nth-child(4),
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(5) {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 2px;
+        padding: 8px 0 !important;
+    }
+
+    /* 待繳 tab 銀行徽章對齊頂部 + 扣款副標顯示 跟信用卡 tab 同邏輯 */
+    .gf-dash-rows-bill .gf-dash-bank { align-items: flex-start; }
+    .gf-dash-rows-bill .gf-dash-bank-pay-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+    .gf-dash-rows-bill .gf-dash-bank-pay-label { font-size: 11px; color: var(--tan); font-weight: 500; }
+    .gf-dash-rows-bill .gf-dash-bank-pay-label::after { content: ":"; }
+    .gf-dash-rows-bill .gf-dash-bank-pay { font-size: 12.5px; color: var(--muted-color); font-weight: 400; }
+    .gf-dash-rows-bill .gf-dash-bank-pay.gf-dash-pay-acct-warn { color: #B47A1A; font-weight: 500; }
+
+    /* 歷史 row 維持 3 欄 繳費日 + 金額 + 狀態 (歷史沒有扣款資料) */
+    .gf-dash-rows-hist .gf-dash-row { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 8px; row-gap: 0; }
+    .gf-dash-rows-hist .gf-dash-row > div:first-child { grid-column: 1 / -1; }
     .gf-dash-rows-hist .gf-dash-row > div:nth-child(2),
     .gf-dash-rows-hist .gf-dash-row > div:nth-child(3),
     .gf-dash-rows-hist .gf-dash-row > div:nth-child(4) {
@@ -372,10 +387,10 @@
         padding: 8px 0 !important;
     }
 
-    /* 操作 cell 絕對定位到 row 右上 跟銀行徽章同一水平線 帳戶第 6 信用卡第 5 待繳第 5 歷史無 */
+    /* 操作 cell 絕對定位到 row 右上 跟銀行徽章同一水平線 帳戶第 6 信用卡第 5 待繳第 6 歷史無 */
     .gf-dash-rows-bank .gf-dash-row > div:nth-child(6),
     .gf-dash-rows-card .gf-dash-row > div:nth-child(5),
-    .gf-dash-rows-bill .gf-dash-row > div:nth-child(5) {
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(6) {
         position: absolute;
         top: 12px;                                                            /* 對齊 row padding-top */
         right: 4px;                                                           /* 對齊 row padding-right */
@@ -385,7 +400,7 @@
     /* 浮起的編輯 cell 不要顯示 ::before label */
     .gf-dash-rows-bank .gf-dash-row > div:nth-child(6)::before,
     .gf-dash-rows-card .gf-dash-row > div:nth-child(5)::before,
-    .gf-dash-rows-bill .gf-dash-row > div:nth-child(5)::before { content: ""; display: none; }
+    .gf-dash-rows-bill .gf-dash-row > div:nth-child(6)::before { content: ""; display: none; }
 
     /* === 歷史 filter 加上 wrap 防止 select 擠 === */
     .gf-dash-filter { width: 100%; }

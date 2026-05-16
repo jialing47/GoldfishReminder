@@ -413,9 +413,9 @@
                         <div class="gf-dash-rows gf-dash-rows-card" role="table">
                             <div class="gf-dash-row-head" role="row">
                                 <div role="columnheader">銀行</div>
+                                <div role="columnheader">扣款帳戶</div>
                                 <div role="columnheader">結帳日</div>
                                 <div role="columnheader">繳費日</div>
-                                <div role="columnheader">自動扣繳帳戶</div>
                                 <div role="columnheader"></div>
                             </div>
                             @foreach (var creditSetting in Model.EnabledCreditSettings)
@@ -447,8 +447,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div role="cell"><span class="gf-dash-day">@FormatStatementDay(creditSetting.StatementDay)</span></div>
-                                    <div role="cell"><span class="gf-dash-day">@paymentDayText</span></div>
                                     <div role="cell">
                                         @if (string.IsNullOrEmpty(payAcctDisplay))
                                         {
@@ -459,6 +457,8 @@
                                             <span class="gf-dash-pay-acct">@payAcctDisplay</span>
                                         }
                                     </div>
+                                    <div role="cell"><span class="gf-dash-day">@FormatStatementDay(creditSetting.StatementDay)</span></div>
+                                    <div role="cell"><span class="gf-dash-day">@paymentDayText</span></div>
                                     <div role="cell" class="right">
                                         <button class="gf-dash-edit"
                                                 type="button"
@@ -491,9 +491,9 @@
                             <div class="gf-dash-rows gf-dash-rows-card" role="table">
                                 <div class="gf-dash-row-head" role="row">
                                     <div role="columnheader">銀行</div>
+                                    <div role="columnheader">扣款帳戶</div>
                                     <div role="columnheader">結帳日</div>
                                     <div role="columnheader">繳費日</div>
-                                    <div role="columnheader">自動扣繳帳戶</div>
                                     <div role="columnheader"></div>
                                 </div>
                                 @foreach (var creditSetting in Model.DisabledCreditSettings)
@@ -525,8 +525,6 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div role="cell"><span class="gf-dash-day">@FormatStatementDay(creditSetting.StatementDay)</span></div>
-                                        <div role="cell"><span class="gf-dash-day">@paymentDayText</span></div>
                                         <div role="cell">
                                             @if (string.IsNullOrEmpty(payAcctDisplay))
                                             {
@@ -537,6 +535,8 @@
                                                 <span class="gf-dash-pay-acct">@payAcctDisplay</span>
                                             }
                                         </div>
+                                        <div role="cell"><span class="gf-dash-day">@FormatStatementDay(creditSetting.StatementDay)</span></div>
+                                        <div role="cell"><span class="gf-dash-day">@paymentDayText</span></div>
                                         <div role="cell" class="right">
                                             <button class="gf-dash-edit"
                                                     type="button"
@@ -573,6 +573,7 @@
                         <div class="gf-dash-rows gf-dash-rows-bill" role="table">
                             <div class="gf-dash-row-head" role="row">
                                 <div role="columnheader">銀行</div>
+                                <div role="columnheader">扣款帳戶</div>
                                 <div role="columnheader">繳費日</div>
                                 <div class="right" role="columnheader">帳單金額</div>
                                 <div role="columnheader">狀態</div>
@@ -581,12 +582,36 @@
                             @foreach (var currentBill in Model.CurrentBills)
                             {
                                 var bankNameOnly = GetBankNameOrCode(currentBill.BankName, currentBill.BankCode);
+                                var billPayAcct = currentBill.PaymentAccountName;
                                 <div class="gf-dash-row" role="row">
                                     <div role="cell">
                                         <div class="gf-dash-bank">
                                             <div class="gf-dash-bank-mark">@currentBill.BankCode</div>
-                                            <div class="gf-dash-bank-name">@bankNameOnly</div>
+                                            <div class="gf-dash-bank-info">
+                                                <div class="gf-dash-bank-name">@bankNameOnly</div>
+                                                <div class="gf-dash-bank-pay-row">
+                                                    <span class="gf-dash-bank-pay-label">扣款</span>
+                                                    @if (string.IsNullOrWhiteSpace(billPayAcct))
+                                                    {
+                                                        <span class="gf-dash-bank-pay gf-dash-pay-acct-warn">未設定</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="gf-dash-bank-pay">@billPayAcct</span>
+                                                    }
+                                                </div>
+                                            </div>
                                         </div>
+                                    </div>
+                                    <div role="cell">
+                                        @if (string.IsNullOrWhiteSpace(billPayAcct))
+                                        {
+                                            <span class="gf-dash-pay-acct-warn">未設定</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gf-dash-pay-acct">@billPayAcct</span>
+                                        }
                                     </div>
                                     <div role="cell"><span class="gf-dash-day">@($"{currentBill.BillMonth:D2}/{currentBill.PaymentDueDay:D2}")</span></div>
                                     <div role="cell" class="right">

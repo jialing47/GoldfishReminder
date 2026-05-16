@@ -25,6 +25,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/css/brand.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/settings-dashboard.css" asp-append-version="true" />
     <style>
 
         .gf-hero { background: radial-gradient(circle at 90% 20%, rgba(230,139,83,.20), transparent 60%), radial-gradient(circle at 10% 80%, rgba(196,99,42,.10), transparent 60%), linear-gradient(180deg,#FAF1E0 0%, #F4E5C9 60%, #FBF6EB 100%); color: var(--ink-text); padding: 80px 0 96px; position: relative; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); margin-top: -1.5rem; overflow: hidden; }
@@ -90,6 +91,7 @@
             .gf-hero-mascot img { max-width: 240px; margin-top: 32px; }
             .gf-features { padding: 48px 0; }
             .gf-steps { padding: 64px 0 48px; }
+            .gf-preview { padding: 56px 0 48px; }
             .gf-section-title { font-size: 24px; }
             .gf-feature { padding: 24px 20px; }
             .gf-step { padding: 18px 0; gap: 14px; }
@@ -97,6 +99,34 @@
             .gf-step h4 { font-size: 16px; }
             .gf-step p { font-size: 13px; }
             .gf-disclaimer { padding: 14px 16px; font-size: 12px; gap: 8px; margin-top: 24px; }
+        }
+
+        /* === 設定中心預覽區塊 === */
+        .gf-preview { padding: 80px 0 64px; background: var(--bg); margin-top: 32px; border-top: 2px solid rgba(184, 84, 35, 0.15); }
+        .gf-preview-dash { pointer-events: auto; }
+        .gf-preview-hint { text-align: center; margin-top: 18px; font-size: 12px; color: var(--muted-color); letter-spacing: .04em; }
+        .gf-preview .gf-dash-tabs button { cursor: pointer; }
+
+        /* === 預覽容器 包住 dashboard 提供明確視覺邊界 === */
+        .gf-preview-frame { position: relative; }
+        /* 預覽 badge 用斜虛線框 + 米色底 暗示 demo 性質 */
+        .gf-preview-badge {
+            display: inline-block;
+            background: var(--gold-bg);
+            color: var(--gold-dark);
+            border: 1px dashed var(--gold);
+            border-radius: 999px;
+            padding: 5px 14px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: .03em;
+            margin-bottom: 16px;
+        }
+        /* 預覽用按鈕 不可互動 視覺淡化 提示這是 demo */
+        .gf-preview-static { cursor: not-allowed; opacity: .6; pointer-events: none; }
+
+        @@media (max-width: 768px) {
+            .gf-preview-badge { font-size: 11px; padding: 4px 10px; margin-bottom: 12px; }
         }
 
         /* === Flex gap fallback 舊 Safari < 14.1 不支援 flex gap 用 margin 模擬 === */
@@ -184,6 +214,351 @@
                 </div>
             </div>
         </section>
+
+        <!-- ===== 設定中心預覽 ===== -->
+        <section class="gf-preview" id="preview">
+            <div class="container">
+                <div class="row mb-5">
+                    <div class="col-lg-7">
+                        <div class="gf-section-eb">SETTINGS PREVIEW · 設定中心預覽</div>
+                        <h2 class="gf-section-title">你的帳務後台長這樣</h2>
+                        <p class="gf-section-sub">所有帳戶、信用卡、帳單都在同一頁管理，點「編輯」看看操作流程。</p>
+                    </div>
+                </div>
+
+                <!-- 預覽容器 視覺結構跟 Settings 設定中心一致 但所有資料為示範用 modal 也不會真的儲存 -->
+                <div class="gf-preview-frame">
+                    <div class="gf-preview-badge" aria-hidden="true">預覽模式 · 此頁所有資料為示範用 操作不會真的儲存</div>
+
+                    <div class="gf-dash gf-preview-dash">
+
+                        <!-- Hero 跟 Settings 一致 共用 settings-dashboard.css 的 gf-dash-hero* 樣式 重新整理按鈕為純視覺裝飾 -->
+                        <div class="gf-dash-hero">
+                            <div class="gf-dash-hero-left">
+                                <div class="gf-dash-eyebrow">DASHBOARD</div>
+                                <h3 class="gf-dash-title">設定中心</h3>
+                                <p class="gf-dash-subtitle">管理銀行帳戶、信用卡設定，以及本月與歷史帳單。</p>
+                            </div>
+                            <button type="button" class="gf-dash-refresh gf-preview-static" tabindex="-1" aria-label="重新整理 預覽用 不可點擊">↻ 重新整理</button>
+                        </div>
+
+                        <!-- KPI 兩張並排 -->
+                        <div class="gf-dash-stats">
+                            <div class="gf-dash-stat">
+                                <div class="gf-dash-stat__label">啟用中帳戶總餘額</div>
+                                <div class="gf-dash-stat__val">152,300</div>
+                            </div>
+                            <div class="gf-dash-stat">
+                                <div class="gf-dash-stat__label">本月應繳金額</div>
+                                <div class="gf-dash-stat__val">12,400</div>
+                            </div>
+                        </div>
+
+                        <!-- 4 個 tab pill -->
+                        <nav class="gf-dash-tabs" role="tablist">
+                            <button type="button" class="gf-dash-tab active" data-preview-tab="bankAccounts">帳戶</button>
+                            <button type="button" class="gf-dash-tab" data-preview-tab="creditSettings">信用卡</button>
+                            <button type="button" class="gf-dash-tab" data-preview-tab="currentBills">待繳帳單</button>
+                            <button type="button" class="gf-dash-tab" data-preview-tab="historyBills">歷史帳單</button>
+                        </nav>
+
+                        <!-- ===== 帳戶 tab ===== -->
+                        <div class="gf-dash-panel gf-preview-panel" id="previewPanelBankAccounts">
+                            <div class="gf-dash-panel-head">
+                                <h2 class="gf-dash-panel-title">啟用中</h2>
+                                <button class="gf-dash-add" type="button" data-bs-toggle="modal" data-bs-target="#previewBankModal"
+                                    data-bankname="" data-bankcode="" data-accountname="" data-accounttype="digital" data-balance="" data-mode="add">＋ 新增帳戶</button>
+                        </div>
+                        <div class="gf-dash-rows gf-dash-rows-bank" role="table">
+                            <div class="gf-dash-row-head" role="row">
+                                <div role="columnheader">銀行</div>
+                                <div role="columnheader">帳戶名稱</div>
+                                <div role="columnheader">類型</div>
+                                <div class="right" role="columnheader">餘額</div>
+                                <div class="right" role="columnheader">待扣</div>
+                                <div role="columnheader"></div>
+                            </div>
+                            <div class="gf-dash-row" role="row">
+                                <div role="cell">
+                                    <div class="gf-dash-bank">
+                                        <div class="gf-dash-bank-mark">812</div>
+                                        <div class="gf-dash-bank-info">
+                                            <div class="gf-dash-bank-name">台新銀行</div>
+                                            <div class="gf-dash-bank-acct-row">
+                                                <span class="gf-dash-bank-pay-label">名稱</span>
+                                                <span class="gf-dash-bank-acct">Richart 數位帳戶</span>
+                                                <span class="gf-dash-tag gf-dash-tag-digital">數位</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div role="cell" class="gf-dash-acct-name">Richart 數位帳戶</div>
+                                <div role="cell"><span class="gf-dash-tag gf-dash-tag-digital">數位</span></div>
+                                <div role="cell" class="right"><span class="gf-dash-amt">88,500</span></div>
+                                <div role="cell" class="right"><span class="gf-dash-pending"><span class="cur">−</span>12,400</span></div>
+                                <div role="cell" class="right">
+                                    <button class="gf-dash-edit" type="button" data-bs-toggle="modal" data-bs-target="#previewBankModal"
+                                            data-bankname="台新銀行" data-bankcode="812" data-accountname="Richart 數位帳戶" data-accounttype="digital" data-balance="88500"
+                                            data-hasimpact="true" data-impactcard="台新銀行信用卡" data-impactamt="12,400">編輯</button>
+                                </div>
+                            </div>
+                            <div class="gf-dash-row" role="row">
+                                <div role="cell">
+                                    <div class="gf-dash-bank">
+                                        <div class="gf-dash-bank-mark">004</div>
+                                        <div class="gf-dash-bank-info">
+                                            <div class="gf-dash-bank-name">臺灣銀行</div>
+                                            <div class="gf-dash-bank-acct-row">
+                                                <span class="gf-dash-bank-pay-label">名稱</span>
+                                                <span class="gf-dash-bank-acct">薪資帳戶</span>
+                                                <span class="gf-dash-tag gf-dash-tag-physical">實體</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div role="cell" class="gf-dash-acct-name">薪資帳戶</div>
+                                <div role="cell"><span class="gf-dash-tag gf-dash-tag-physical">實體</span></div>
+                                <div role="cell" class="right"><span class="gf-dash-amt">63,800</span></div>
+                                <div role="cell" class="right"><span class="gf-dash-amt-none">—</span></div>
+                                <div role="cell" class="right">
+                                    <button class="gf-dash-edit" type="button" data-bs-toggle="modal" data-bs-target="#previewBankModal"
+                                            data-bankname="臺灣銀行" data-bankcode="004" data-accountname="薪資帳戶" data-accounttype="physical" data-balance="63800"
+                                            data-hasimpact="" data-impactcard="" data-impactamt="">編輯</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 停用中 collapse -->
+                        <button class="gf-dash-collapse-trigger" type="button" data-bs-toggle="collapse" data-bs-target="#pvDisabledAccounts" aria-expanded="false">
+                            <span>停用中</span>
+                            <span class="count">展開 (1)</span>
+                        </button>
+                        <div class="collapse mt-3" id="pvDisabledAccounts">
+                            <div class="gf-dash-rows gf-dash-rows-bank" role="table">
+                                <div class="gf-dash-row-head" role="row">
+                                    <div role="columnheader">銀行</div>
+                                    <div role="columnheader">帳戶名稱</div>
+                                    <div role="columnheader">類型</div>
+                                    <div class="right" role="columnheader">餘額</div>
+                                    <div class="right" role="columnheader">待扣</div>
+                                    <div role="columnheader"></div>
+                                </div>
+                                <div class="gf-dash-row" role="row">
+                                    <div role="cell">
+                                        <div class="gf-dash-bank">
+                                            <div class="gf-dash-bank-mark">700</div>
+                                            <div class="gf-dash-bank-info">
+                                                <div class="gf-dash-bank-name">中華郵政</div>
+                                                <div class="gf-dash-bank-acct-row">
+                                                    <span class="gf-dash-bank-pay-label">名稱</span>
+                                                    <span class="gf-dash-bank-acct">郵局帳戶</span>
+                                                    <span class="gf-dash-tag gf-dash-tag-physical">實體</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div role="cell" class="gf-dash-acct-name">郵局帳戶</div>
+                                    <div role="cell"><span class="gf-dash-tag gf-dash-tag-physical">實體</span></div>
+                                    <div role="cell" class="right"><span class="gf-dash-amt">5,200</span></div>
+                                    <div role="cell" class="right"><span class="gf-dash-amt-none">—</span></div>
+                                    <div role="cell" class="right">
+                                        <button class="gf-dash-edit" type="button" data-bs-toggle="modal" data-bs-target="#previewBankModal"
+                                                data-bankname="中華郵政" data-bankcode="700" data-accountname="郵局帳戶" data-accounttype="physical" data-balance="5200"
+                                                data-hasimpact="" data-disabled="true">編輯</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 信用卡 tab ===== -->
+                    <div class="gf-dash-panel gf-preview-panel d-none" id="previewPanelCreditSettings">
+                        <div class="gf-dash-panel-head">
+                            <h2 class="gf-dash-panel-title">啟用中</h2>
+                            <button class="gf-dash-add" type="button" data-bs-toggle="modal" data-bs-target="#previewCreditModal"
+                                    data-bankname="" data-bankcode="" data-statementday="" data-paymentdueday="" data-payacct="" data-mode="add">＋ 新增信用卡</button>
+                        </div>
+                        <div class="gf-dash-rows gf-dash-rows-card" role="table">
+                            <div class="gf-dash-row-head" role="row">
+                                <div role="columnheader">銀行</div>
+                                <div role="columnheader">扣款帳戶</div>
+                                <div role="columnheader">結帳日</div>
+                                <div role="columnheader">繳費日</div>
+                                <div role="columnheader"></div>
+                            </div>
+                            <div class="gf-dash-row" role="row">
+                                <div role="cell">
+                                    <div class="gf-dash-bank">
+                                        <div class="gf-dash-bank-mark">812</div>
+                                        <div class="gf-dash-bank-info">
+                                            <div class="gf-dash-bank-name">台新銀行</div>
+                                            <div class="gf-dash-bank-pay-row">
+                                                <span class="gf-dash-bank-pay-label">扣款</span>
+                                                <span class="gf-dash-bank-pay">Richart 數位帳戶</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div role="cell"><span class="gf-dash-pay-acct">Richart 數位帳戶</span></div>
+                                <div role="cell"><span class="gf-dash-day">每月 06 號</span></div>
+                                <div role="cell"><span class="gf-dash-day">每月 22 號</span></div>
+                                <div role="cell" class="right">
+                                    <button class="gf-dash-edit" type="button" data-bs-toggle="modal" data-bs-target="#previewCreditModal"
+                                            data-bankname="台新銀行" data-bankcode="812" data-statementday="6" data-paymentdueday="22" data-payacct="Richart 數位帳戶">編輯</button>
+                                </div>
+                            </div>
+                            <div class="gf-dash-row" role="row">
+                                <div role="cell">
+                                    <div class="gf-dash-bank">
+                                        <div class="gf-dash-bank-mark">013</div>
+                                        <div class="gf-dash-bank-info">
+                                            <div class="gf-dash-bank-name">國泰世華</div>
+                                            <div class="gf-dash-bank-pay-row">
+                                                <span class="gf-dash-bank-pay-label">扣款</span>
+                                                <span class="gf-dash-bank-pay gf-dash-pay-acct-warn">未設定</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div role="cell"><span class="gf-dash-pay-acct-warn">未設定</span></div>
+                                <div role="cell"><span class="gf-dash-day">每月 18 號</span></div>
+                                <div role="cell"><span class="gf-dash-day">次月 05 號</span></div>
+                                <div role="cell" class="right">
+                                    <button class="gf-dash-edit" type="button" data-bs-toggle="modal" data-bs-target="#previewCreditModal"
+                                            data-bankname="國泰世華" data-bankcode="013" data-statementday="18" data-paymentdueday="5" data-payacct="">編輯</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 停用中信用卡 collapse -->
+                        <button class="gf-dash-collapse-trigger" type="button" data-bs-toggle="collapse" data-bs-target="#pvDisabledCards" aria-expanded="false">
+                            <span>停用中</span>
+                            <span class="count">展開 (0)</span>
+                        </button>
+                        <div class="collapse mt-3" id="pvDisabledCards">
+                            <div class="gf-dash-empty">沒有停用中的信用卡</div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 待繳帳單 tab ===== -->
+                    <div class="gf-dash-panel gf-preview-panel d-none" id="previewPanelCurrentBills">
+                        <div class="gf-dash-panel-head">
+                            <h2 class="gf-dash-panel-title">本月待繳</h2>
+                        </div>
+                        <div class="gf-dash-rows gf-dash-rows-bill" role="table">
+                            <div class="gf-dash-row-head" role="row">
+                                <div role="columnheader">銀行</div>
+                                <div role="columnheader">扣款帳戶</div>
+                                <div role="columnheader">繳費日</div>
+                                <div class="right" role="columnheader">帳單金額</div>
+                                <div role="columnheader">狀態</div>
+                                <div role="columnheader"></div>
+                            </div>
+                            <div class="gf-dash-row" role="row">
+                                <div role="cell">
+                                    <div class="gf-dash-bank">
+                                        <div class="gf-dash-bank-mark">812</div>
+                                        <div class="gf-dash-bank-info">
+                                            <div class="gf-dash-bank-name">台新銀行</div>
+                                            <div class="gf-dash-bank-pay-row">
+                                                <span class="gf-dash-bank-pay-label">扣款</span>
+                                                <span class="gf-dash-bank-pay">Richart 數位帳戶</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div role="cell"><span class="gf-dash-pay-acct">Richart 數位帳戶</span></div>
+                                <div role="cell"><span class="gf-dash-day">06/22</span></div>
+                                <div role="cell" class="right"><span class="gf-dash-amt">12,400</span></div>
+                                <div role="cell"><span class="gf-dash-status gf-dash-status-due">待繳</span></div>
+                                <div role="cell" class="right">
+                                    <div class="gf-dash-actions">
+                                        <button class="gf-dash-edit" type="button" data-bs-toggle="modal" data-bs-target="#previewBillModal"
+                                                data-billamount="12400">修改金額</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gf-dash-row" role="row">
+                                <div role="cell">
+                                    <div class="gf-dash-bank">
+                                        <div class="gf-dash-bank-mark">013</div>
+                                        <div class="gf-dash-bank-info">
+                                            <div class="gf-dash-bank-name">國泰世華</div>
+                                            <div class="gf-dash-bank-pay-row">
+                                                <span class="gf-dash-bank-pay-label">扣款</span>
+                                                <span class="gf-dash-bank-pay gf-dash-pay-acct-warn">未設定</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div role="cell"><span class="gf-dash-pay-acct-warn">未設定</span></div>
+                                <div role="cell"><span class="gf-dash-day">07/05</span></div>
+                                <div role="cell" class="right"><span class="gf-dash-amt-danger">—</span></div>
+                                <div role="cell"><span class="gf-dash-status gf-dash-status-danger">未設金額</span></div>
+                                <div role="cell" class="right">
+                                    <div class="gf-dash-actions">
+                                        <button class="gf-dash-edit" type="button" data-bs-toggle="modal" data-bs-target="#previewBillModal"
+                                                data-billamount="0">輸入金額</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 歷史帳單 tab ===== -->
+                    <div class="gf-dash-panel gf-preview-panel d-none" id="previewPanelHistoryBills">
+                        <div class="gf-dash-panel-head">
+                            <h2 class="gf-dash-panel-title">歷史帳單</h2>
+                            <div class="gf-dash-filter">
+                                <select id="pvHistoryYear">
+                                    <option value="2026" selected>2026</option>
+                                </select>
+                                <span class="gf-dash-filter-unit">年</span>
+                                <select id="pvHistoryMonth">
+                                    <option value="5" selected>05</option>
+                                    <option value="4">04</option>
+                                </select>
+                                <span class="gf-dash-filter-unit">月</span>
+                                <button type="button" class="gf-dash-filter-btn">查詢</button>
+                            </div>
+                        </div>
+                        <div class="gf-dash-rows gf-dash-rows-hist" role="table">
+                            <div class="gf-dash-row-head" role="row">
+                                <div role="columnheader">銀行</div>
+                                <div role="columnheader">繳費日</div>
+                                <div class="right" role="columnheader">帳單金額</div>
+                                <div role="columnheader">狀態</div>
+                            </div>
+                            <div class="gf-dash-row" role="row">
+                                <div role="cell">
+                                    <div class="gf-dash-bank">
+                                        <div class="gf-dash-bank-mark">812</div>
+                                        <div class="gf-dash-bank-name">台新銀行</div>
+                                    </div>
+                                </div>
+                                <div role="cell"><span class="gf-dash-day">05/22</span></div>
+                                <div role="cell" class="right"><span class="gf-dash-amt">9,800</span></div>
+                                <div role="cell"><span class="gf-dash-status gf-dash-status-paid">已繳</span></div>
+                            </div>
+                            <div class="gf-dash-row" role="row">
+                                <div role="cell">
+                                    <div class="gf-dash-bank">
+                                        <div class="gf-dash-bank-mark">013</div>
+                                        <div class="gf-dash-bank-name">國泰世華</div>
+                                    </div>
+                                </div>
+                                <div role="cell"><span class="gf-dash-day">06/05</span></div>
+                                <div role="cell" class="right"><span class="gf-dash-amt">7,150</span></div>
+                                <div role="cell"><span class="gf-dash-status gf-dash-status-paid">已繳</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                        <div class="gf-preview-hint">此為預覽畫面，資料僅供展示用途</div>
+                    </div>
+                </div>
+            </div>
+        </section>
     }
     else if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
@@ -208,6 +583,327 @@
         </div>
     </div>
 </footer>
+
+<!-- ===== 預覽用 銀行帳戶 Modal ===== -->
+<div class="modal fade" id="previewBankModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content gf-modal-content">
+            <div class="gf-modal-head">
+                <div class="gf-modal-head-left">
+                    <div class="gf-modal-eyebrow">EDIT</div>
+                    <h2 class="gf-modal-title">銀行帳戶</h2>
+                    <div class="gf-modal-sub">用來追蹤餘額 或設為信用卡的扣款帳戶</div>
+                </div>
+                <button type="button" class="gf-modal-close" data-bs-dismiss="modal" aria-label="關閉">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="gf-modal-body">
+                <div class="gf-field">
+                    <label class="gf-label" for="pvBankCode">銀行代碼<span class="gf-label-hint">3 碼數字</span></label>
+                    <input class="gf-input mono" id="pvBankCode" placeholder="例如 812" />
+                    <div class="gf-bank-preview" id="pvBankPreview"></div>
+                </div>
+                <div class="gf-field">
+                    <label class="gf-label" for="pvAccountName">帳戶名稱</label>
+                    <input class="gf-input" id="pvAccountName" />
+                </div>
+                <div class="gf-field">
+                    <label class="gf-label" for="pvAccountType">帳戶類型</label>
+                    <select class="gf-select" id="pvAccountType">
+                        <option value="digital">數位帳戶</option>
+                        <option value="physical">實體帳戶</option>
+                    </select>
+                </div>
+                <div class="gf-field">
+                    <label class="gf-label" for="pvBalance">餘額<span class="gf-label-hint">可空白</span></label>
+                    <input class="gf-input mono" id="pvBalance" inputmode="decimal" />
+                    <div class="gf-help">留空代表不更新餘額 只更新其他欄位</div>
+                </div>
+
+                <!-- 待扣影響提示 -->
+                <div class="gf-impact d-none" id="pvImpactBox">
+                    <div class="gf-impact-head">待扣影響提示</div>
+                    <div class="gf-impact-sum" id="pvImpactSummary"></div>
+                    <ul class="gf-impact-list" id="pvImpactDetails"></ul>
+                </div>
+
+                <label class="gf-switch" for="pvEnabled">
+                    <input type="checkbox" id="pvEnabled" checked />
+                    <div class="gf-switch-label">啟用此帳戶<small>停用會自動解除信用卡對它的自動扣款設定</small></div>
+                </label>
+
+                <!-- 停用警告 -->
+                <div id="pvDisableWarning" class="gf-alert gf-alert-warn d-none">
+                    停用此帳戶會自動解除所有信用卡對它的自動扣款設定
+                </div>
+            </div>
+            <div class="gf-modal-foot">
+                <button type="button" class="gf-btn gf-btn-ghost" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="gf-btn gf-btn-primary" data-bs-dismiss="modal">儲存（預覽）</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 預覽用 信用卡 Modal ===== -->
+<div class="modal fade" id="previewCreditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content gf-modal-content">
+            <div class="gf-modal-head">
+                <div class="gf-modal-head-left">
+                    <div class="gf-modal-eyebrow">EDIT</div>
+                    <h2 class="gf-modal-title">信用卡設定</h2>
+                    <div class="gf-modal-sub">設定結帳日 繳費日 與對應的自動扣款帳戶</div>
+                </div>
+                <button type="button" class="gf-modal-close" data-bs-dismiss="modal" aria-label="關閉">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="gf-modal-body">
+                <div class="gf-field">
+                    <label class="gf-label" for="pvCsBankCode">銀行代碼<span class="gf-label-hint">3 碼數字</span></label>
+                    <input class="gf-input mono" id="pvCsBankCode" placeholder="例如 812" />
+                    <div class="gf-bank-preview" id="pvCsBankPreview"></div>
+                </div>
+                <div class="gf-form-row gf-form-row-2">
+                    <div class="gf-field">
+                        <label class="gf-label" for="pvStatementDay">結帳日<span class="gf-label-hint">1-31</span></label>
+                        <input class="gf-input mono" type="number" id="pvStatementDay" min="1" max="31" />
+                    </div>
+                    <div class="gf-field">
+                        <label class="gf-label" for="pvPaymentDueDay">繳費日<span class="gf-label-hint">1-31</span></label>
+                        <input class="gf-input mono" type="number" id="pvPaymentDueDay" min="1" max="31" />
+                    </div>
+                </div>
+                <div class="gf-field">
+                    <label class="gf-label" for="pvPaymentAccountId">扣款帳戶<span class="gf-label-hint">可空白</span></label>
+                    <select class="gf-select" id="pvPaymentAccountId">
+                        <option value="">未設定</option>
+                        <option value="1">812 台新 — Richart 數位帳戶</option>
+                        <option value="2">004 臺灣銀行 — 薪資帳戶</option>
+                    </select>
+                </div>
+                <label class="gf-switch" for="pvCsEnabled">
+                    <input type="checkbox" id="pvCsEnabled" checked />
+                    <div class="gf-switch-label">啟用此卡<small>停用後不再加入排程提醒</small></div>
+                </label>
+            </div>
+            <div class="gf-modal-foot">
+                <button type="button" class="gf-btn gf-btn-ghost" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="gf-btn gf-btn-primary" data-bs-dismiss="modal">儲存（預覽）</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 預覽用 帳單金額 Modal ===== -->
+<div class="modal fade" id="previewBillModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content gf-modal-content">
+            <div class="gf-modal-head">
+                <div class="gf-modal-head-left">
+                    <div class="gf-modal-eyebrow">EDIT</div>
+                    <h2 class="gf-modal-title">修改帳單金額</h2>
+                    <div class="gf-modal-sub">只會修改金額 其他欄位維持原樣</div>
+                </div>
+                <button type="button" class="gf-modal-close" data-bs-dismiss="modal" aria-label="關閉">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="gf-modal-body">
+                <div class="gf-field">
+                    <label class="gf-label" for="pvBillAmount">帳單金額</label>
+                    <input class="gf-input mono" type="number" id="pvBillAmount" min="0" />
+                    <div class="gf-help">輸入信用卡帳單該繳的金額 系統會在繳款日前提醒</div>
+                </div>
+            </div>
+            <div class="gf-modal-foot">
+                <button type="button" class="gf-btn gf-btn-ghost" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="gf-btn gf-btn-primary" data-bs-dismiss="modal">儲存（預覽）</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" defer></script>
+<script>
+    // 設定中心預覽 tab 切換 + 三個 modal 假資料填入
+    document.addEventListener('DOMContentLoaded', function ()
+    {
+        // tab 名稱對應 panel id
+        var tabMap = {
+            'bankAccounts': 'previewPanelBankAccounts',
+            'creditSettings': 'previewPanelCreditSettings',
+            'currentBills': 'previewPanelCurrentBills',
+            'historyBills': 'previewPanelHistoryBills'
+        };
+
+        // 綁定 tab 按鈕點擊
+        var tabButtons = document.querySelectorAll('[data-preview-tab]');
+        for (var i = 0; i < tabButtons.length; i++)
+        {
+            tabButtons[i].addEventListener('click', function ()
+            {
+                for (var j = 0; j < tabButtons.length; j++)
+                {
+                    tabButtons[j].classList.remove('active');
+                }
+                this.classList.add('active');
+
+                var panels = document.querySelectorAll('.gf-preview-panel');
+                for (var k = 0; k < panels.length; k++)
+                {
+                    panels[k].classList.add('d-none');
+                }
+                var targetId = tabMap[this.getAttribute('data-preview-tab')];
+                if (targetId)
+                {
+                    document.getElementById(targetId).classList.remove('d-none');
+                }
+            });
+        }
+
+        // 銀行帳戶 modal 填入假資料 + 待扣影響提示
+        var bankModal = document.getElementById('previewBankModal');
+        if (bankModal)
+        {
+            bankModal.addEventListener('show.bs.modal', function (event)
+            {
+                var button = event.relatedTarget;
+                if (!button)
+                {
+                    return;
+                }
+
+                var bankCode = button.getAttribute('data-bankcode') || '';
+                var bankName = button.getAttribute('data-bankname') || '';
+                var isDisabled = button.getAttribute('data-disabled') === 'true';
+
+                document.getElementById('pvBankCode').value = bankCode;
+                document.getElementById('pvAccountName').value = button.getAttribute('data-accountname') || '';
+                document.getElementById('pvAccountType').value = button.getAttribute('data-accounttype') || 'digital';
+                document.getElementById('pvBalance').value = button.getAttribute('data-balance') || '';
+                document.getElementById('pvEnabled').checked = !isDisabled;
+
+                // 銀行名稱預覽
+                var preview = document.getElementById('pvBankPreview');
+                if (bankName)
+                {
+                    preview.textContent = bankName;
+                    preview.className = 'gf-bank-preview is-hit';
+                }
+                else
+                {
+                    preview.textContent = '';
+                    preview.className = 'gf-bank-preview';
+                }
+
+                // 待扣影響提示
+                var impactBox = document.getElementById('pvImpactBox');
+                var hasImpact = button.getAttribute('data-hasimpact') === 'true';
+                if (hasImpact)
+                {
+                    var cardName = button.getAttribute('data-impactcard') || '';
+                    var impactAmt = button.getAttribute('data-impactamt') || '0';
+                    document.getElementById('pvImpactSummary').textContent = '此帳戶有 1 張信用卡設為自動扣款，合計待扣 ' + impactAmt;
+                    document.getElementById('pvImpactDetails').innerHTML = '<li><span>' + cardName + '</span><span>−' + impactAmt + '</span></li>';
+                    impactBox.classList.remove('d-none');
+                }
+                else
+                {
+                    impactBox.classList.add('d-none');
+                }
+
+                // 停用警告
+                var disableWarning = document.getElementById('pvDisableWarning');
+                disableWarning.classList.add('d-none');
+            });
+
+            // 啟用 checkbox 切換停用警告
+            var enabledCheckbox = document.getElementById('pvEnabled');
+            if (enabledCheckbox)
+            {
+                enabledCheckbox.addEventListener('change', function ()
+                {
+                    var disableWarning = document.getElementById('pvDisableWarning');
+                    if (!this.checked)
+                    {
+                        disableWarning.classList.remove('d-none');
+                    }
+                    else
+                    {
+                        disableWarning.classList.add('d-none');
+                    }
+                });
+            }
+        }
+
+        // 信用卡 modal 填入假資料
+        var creditModal = document.getElementById('previewCreditModal');
+        if (creditModal)
+        {
+            creditModal.addEventListener('show.bs.modal', function (event)
+            {
+                var button = event.relatedTarget;
+                if (!button)
+                {
+                    return;
+                }
+
+                var bankCode = button.getAttribute('data-bankcode') || '';
+                var bankName = button.getAttribute('data-bankname') || '';
+
+                document.getElementById('pvCsBankCode').value = bankCode;
+                document.getElementById('pvStatementDay').value = button.getAttribute('data-statementday') || '';
+                document.getElementById('pvPaymentDueDay').value = button.getAttribute('data-paymentdueday') || '';
+                document.getElementById('pvCsEnabled').checked = true;
+
+                // 銀行名稱預覽
+                var preview = document.getElementById('pvCsBankPreview');
+                if (bankName)
+                {
+                    preview.textContent = bankName;
+                    preview.className = 'gf-bank-preview is-hit';
+                }
+                else
+                {
+                    preview.textContent = '';
+                    preview.className = 'gf-bank-preview';
+                }
+
+                // 扣款帳戶 select 對應
+                var payAcct = button.getAttribute('data-payacct') || '';
+                var selectEl = document.getElementById('pvPaymentAccountId');
+                selectEl.value = '';
+                for (var i = 0; i < selectEl.options.length; i++)
+                {
+                    if (selectEl.options[i].text.indexOf(payAcct) !== -1 && payAcct !== '')
+                    {
+                        selectEl.value = selectEl.options[i].value;
+                        break;
+                    }
+                }
+            });
+        }
+
+        // 帳單金額 modal 填入假資料
+        var billModal = document.getElementById('previewBillModal');
+        if (billModal)
+        {
+            billModal.addEventListener('show.bs.modal', function (event)
+            {
+                var button = event.relatedTarget;
+                if (!button)
+                {
+                    return;
+                }
+                var amount = button.getAttribute('data-billamount') || '0';
+                document.getElementById('pvBillAmount').value = amount;
+            });
+        }
+    });
+</script>
 
 </body>
 </html>
