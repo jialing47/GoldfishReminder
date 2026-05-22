@@ -50,8 +50,16 @@ builder.Services.AddAuthentication("gr")
 builder.Services.AddAuthorization();
 
 // PostgreSQL DbContext
+// EF Core transient retry: Neon 偶爾 cold start 連線會 timeout 開啟內建 retry 避免 daily reminder 整個 batch 中斷
+// Timeout=30 與 Command Timeout=60 設定寫在 appsettings 內的 connection string
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), npgsqlOptions =>
+    {
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorCodesToAdd: null);
+    }));
 
 // Options 綁定
 builder.Services.Configure<WebOptions>(builder.Configuration.GetSection("Web"));

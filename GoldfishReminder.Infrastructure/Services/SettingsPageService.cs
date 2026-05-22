@@ -2,6 +2,7 @@
 using GoldfishReminder.Application.Models;
 using GoldfishReminder.Application.Services;
 using GoldfishReminder.Application.Workflows;
+using GoldfishReminder.Domain.Entities;
 using GoldfishReminder.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -131,25 +132,21 @@ public class SettingsPageService : ISettingsPageService
                 x => x.Key,
                 x => x.OrderByDescending(y => y.Enabled).Select(y => y.PaymentBankAccountId).FirstOrDefault());
 
-        // 改用「真正繳款日」判斷是否屬於本月待繳 不再用 BillYear/BillMonth 否則跨月帳單會錯位
+        // 待繳帳單顯示條件 未付款 且 未逾期 DueDate 大於等於今天 跨月卡的窗口期也會被自然涵蓋
         var currentBills = allBills
             .Where(x => !x.Paid)
-            .Select(x => new { Snapshot = x, DueDate = ComputeDueDate(x) })
-            .Where(x => x.DueDate.Year == now.Year && x.DueDate.Month == now.Month)
             .Select(x => new CurrentBillItem
             {
-                Id = x.Snapshot.Id,
-                BankCode = x.Snapshot.BankCode,
-                BankName = bankNameByCode.GetValueOrDefault(x.Snapshot.BankCode, string.Empty),
-                BillYear = x.Snapshot.BillYear,
-                BillMonth = x.Snapshot.BillMonth,
-                PaymentDueDay = x.Snapshot.PaymentDueDay,
-                BillAmount = x.Snapshot.BillAmount,
-                AmountConfirmed = x.Snapshot.AmountConfirmed,
-                Paid = x.Snapshot.Paid,
-                PaymentAccountName = BuildPaymentAccountName(x.Snapshot.BankCode, paymentAccountByBankCode, paymentAccountNameById)
+                Id = x.Id,
+                BankCode = x.BankCode,
+                BankName = bankNameByCode.GetValueOrDefault(x.BankCode, string.Empty),
+                DueDate = CreditBillSchedule.CalculateDueDate(x.BillYear, x.BillMonth, x.StatementDay, x.PaymentDueDay),
+                BillAmount = x.BillAmount,
+                AmountConfirmed = x.AmountConfirmed,
+                PaymentAccountName = BuildPaymentAccountName(x.BankCode, paymentAccountByBankCode, paymentAccountNameById)
             })
-            .OrderBy(x => x.PaymentDueDay)
+            .Where(x => x.DueDate.Date >= now.Date)
+            .OrderBy(x => x.DueDate)
             .ThenBy(x => x.BankCode)
             .ToList();
 
@@ -161,9 +158,7 @@ public class SettingsPageService : ISettingsPageService
             .Select(x => new HistoryMonthOptionItem
             {
                 Year = x.BillYear,
-                Month = x.BillMonth,
-                Value = $"{x.BillYear:D4}-{x.BillMonth:D2}",
-                Text = $"{x.BillYear:D4}/{x.BillMonth:D2}"
+                Month = x.BillMonth
             })
             .ToList();
 
@@ -182,14 +177,11 @@ public class SettingsPageService : ISettingsPageService
             .Where(x => x.BillYear == selectedHistoryYear && x.BillMonth == selectedHistoryMonth)
             .Select(x => new HistoryBillItem
             {
-                Id = x.Id,
                 BankCode = x.BankCode,
                 BankName = bankNameByCode.GetValueOrDefault(x.BankCode, string.Empty),
-                BillYear = x.BillYear,
-                BillMonth = x.BillMonth,
                 BillAmount = x.BillAmount,
                 Paid = x.Paid,
-                DueDate = ComputeDueDate(x)
+                DueDate = CreditBillSchedule.CalculateDueDate(x.BillYear, x.BillMonth, x.StatementDay, x.PaymentDueDay)
             })
             .OrderBy(x => x.BankCode)
             .ToList();
@@ -426,28 +418,6 @@ public class SettingsPageService : ISettingsPageService
         public int? BillAmount { get; set; }
         public bool AmountConfirmed { get; set; }
         public bool Paid { get; set; }
-    }
-
-    // 計算真正繳款日 繳款日號小於結帳日號視為跨月 落在帳單月份的下個月
-    // 與 CreditBillWorkflow.Helpers.GetDueDate 邏輯一致
-    private static DateTime ComputeDueDate(BillSnapshot bill)
-    {
-        var year = bill.BillYear;
-        var month = bill.BillMonth;
-
-        if (bill.PaymentDueDay < bill.StatementDay)
-        {
-            month++;
-            if (month > 12)
-            {
-                month = 1;
-                year++;
-            }
-        }
-
-        var daysInMonth = DateTime.DaysInMonth(year, month);
-        var clampedDay = Math.Min(bill.PaymentDueDay, daysInMonth);
-        return new DateTime(year, month, clampedDay);
     }
 
     //帳戶類型顯示文字

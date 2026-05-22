@@ -23,6 +23,12 @@ public class DiscordInteractionsController : ControllerBase
     private const string BalanceModalPrefix = "gr_balance_modal:";
     private const string BalanceModalInputId = "newBalance";
 
+    // Discord interaction 共用的 JSON 設定 static readonly 讓內部 type metadata cache 跨請求重用 大幅減少反射成本
+    private static readonly JsonSerializerOptions InteractionJsonOptions = new JsonSerializerOptions
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private readonly CreditBillWorkflow creditBillWorkflow;
     private readonly IBackgroundTaskQueue taskQueue;
     private readonly IDiscordSignatureVerifier discordSignatureVerifier;
@@ -61,12 +67,7 @@ public class DiscordInteractionsController : ControllerBase
             return Unauthorized();
         }
 
-        var request = JsonSerializer.Deserialize<DiscordInteractionRequest>(
-            rawBody,
-            new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+        var request = JsonSerializer.Deserialize<DiscordInteractionRequest>(rawBody, InteractionJsonOptions);
 
         if (request == null)
         {

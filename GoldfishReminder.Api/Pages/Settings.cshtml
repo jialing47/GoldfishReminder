@@ -583,6 +583,8 @@
                             {
                                 var bankNameOnly = GetBankNameOrCode(currentBill.BankName, currentBill.BankCode);
                                 var billPayAcct = currentBill.PaymentAccountName;
+                                // 狀態三段 未設金額 / 需自行繳費 / 待自動扣款 已繳跟逾期不會出現在這 filter 已排除
+                                var hasPayAcct = !string.IsNullOrWhiteSpace(billPayAcct);
                                 <div class="gf-dash-row" role="row">
                                     <div role="cell">
                                         <div class="gf-dash-bank">
@@ -613,7 +615,7 @@
                                             <span class="gf-dash-pay-acct">@billPayAcct</span>
                                         }
                                     </div>
-                                    <div role="cell"><span class="gf-dash-day">@($"{currentBill.BillMonth:D2}/{currentBill.PaymentDueDay:D2}")</span></div>
+                                    <div role="cell"><span class="gf-dash-day">@currentBill.DueDate.ToString("MM/dd")</span></div>
                                     <div role="cell" class="right">
                                         @if (currentBill.AmountConfirmed && currentBill.BillAmount.HasValue)
                                         {
@@ -625,42 +627,39 @@
                                         }
                                     </div>
                                     <div role="cell">
-                                        @if (currentBill.Paid)
-                                        {
-                                            <span class="gf-dash-status gf-dash-status-paid">已繳</span>
-                                        }
-                                        else if (!currentBill.AmountConfirmed)
+                                        @if (!currentBill.AmountConfirmed)
                                         {
                                             <span class="gf-dash-status gf-dash-status-danger">未設金額</span>
                                         }
+                                        else if (!hasPayAcct)
+                                        {
+                                            <span class="gf-dash-status gf-dash-status-due">需自行繳費</span>
+                                        }
                                         else
                                         {
-                                            <span class="gf-dash-status gf-dash-status-due">待繳</span>
+                                            <span class="gf-dash-status gf-dash-status-warn">待自動扣款</span>
                                         }
                                     </div>
                                     <div role="cell" class="right">
-                                        @if (!currentBill.Paid)
-                                        {
-                                            <div class="gf-dash-actions">
-                                                <button class="gf-dash-edit"
-                                                        type="button"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#billAmountModal"
-                                                        data-billid="@currentBill.Id"
-                                                        data-billamount="@GetBillAmountOrZero(currentBill.BillAmount)">@EditAmountLabel(currentBill.AmountConfirmed)</button>
-                                                @if (currentBill.AmountConfirmed && string.IsNullOrWhiteSpace(currentBill.PaymentAccountName))
-                                                {
-                                                    <form method="post" asp-page="/Settings" asp-page-handler="MarkBillPaid" class="d-inline">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="tab" value="currentBills" />
-                                                        <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
-                                                        <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
-                                                        <input type="hidden" name="billId" value="@currentBill.Id" />
-                                                        <button type="submit" class="gf-dash-edit">確認已繳費</button>
-                                                    </form>
-                                                }
-                                            </div>
-                                        }
+                                        <div class="gf-dash-actions">
+                                            <button class="gf-dash-edit"
+                                                    type="button"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#billAmountModal"
+                                                    data-billid="@currentBill.Id"
+                                                    data-billamount="@GetBillAmountOrZero(currentBill.BillAmount)">@EditAmountLabel(currentBill.AmountConfirmed)</button>
+                                            @if (currentBill.AmountConfirmed && string.IsNullOrWhiteSpace(currentBill.PaymentAccountName))
+                                            {
+                                                <form method="post" asp-page="/Settings" asp-page-handler="MarkBillPaid" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="tab" value="currentBills" />
+                                                    <input type="hidden" name="historyYear" value="@Model.HistoryYear" />
+                                                    <input type="hidden" name="historyMonth" value="@Model.HistoryMonth" />
+                                                    <input type="hidden" name="billId" value="@currentBill.Id" />
+                                                    <button type="submit" class="gf-dash-edit">確認已繳費</button>
+                                                </form>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             }
@@ -710,8 +709,8 @@
                             @foreach (var historyBill in Model.HistoryBills)
                             {
                                 var bankNameOnly = GetBankNameOrCode(historyBill.BankName, historyBill.BankCode);
-                                // 歷史帳單三態 已繳 未到繳費日 未繳 由 DueDate 與今日比對
-                                var notYetDue = !historyBill.Paid && historyBill.DueDate.Date > Model.TodayInTaipei.Date;
+                                // 歷史帳單三態 已繳 未繳 逾期 今天到期還能繳算未繳不算逾期
+                                var isOverdue = !historyBill.Paid && historyBill.DueDate.Date < Model.TodayInTaipei.Date;
                                 <div class="gf-dash-row" role="row">
                                     <div role="cell">
                                         <div class="gf-dash-bank">
@@ -735,13 +734,13 @@
                                         {
                                             <span class="gf-dash-status gf-dash-status-paid">已繳</span>
                                         }
-                                        else if (notYetDue)
+                                        else if (isOverdue)
                                         {
-                                            <span class="gf-dash-status gf-dash-status-warn">未到繳費日</span>
+                                            <span class="gf-dash-status gf-dash-status-danger">逾期</span>
                                         }
                                         else
                                         {
-                                            <span class="gf-dash-status gf-dash-status-danger">未繳</span>
+                                            <span class="gf-dash-status gf-dash-status-warn">未繳</span>
                                         }
                                     </div>
                                 </div>

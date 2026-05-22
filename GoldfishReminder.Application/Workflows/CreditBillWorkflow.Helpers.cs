@@ -158,8 +158,8 @@ public partial class CreditBillWorkflow
     // 判斷帳單動作
     private static BillActionType DecideAction(CreditBill creditBill, BalanceCheckResult balance, DateTime today)
     {
-        var dueDate = GetDueDate(creditBill);
-        var statementDate = GetStatementDate(creditBill);
+        var dueDate = CreditBillSchedule.CalculateDueDate(creditBill);
+        var statementDate = CreditBillSchedule.CalculateStatementDate(creditBill);
 
         if (today > dueDate.AddDays(OverdueGracePeriodDays))
         {
@@ -247,35 +247,6 @@ public partial class CreditBillWorkflow
         }
 
         return paymentAccounts;
-    }
-
-    // 計算結帳日 在帳單月份內 超過當月天數 clamp 到最後一天
-    private static DateTime GetStatementDate(CreditBill creditBill)
-    {
-        var daysInMonth = DateTime.DaysInMonth(creditBill.BillYear, creditBill.BillMonth);
-        var clampedDay = Math.Min(creditBill.StatementDay, daysInMonth);
-        return new DateTime(creditBill.BillYear, creditBill.BillMonth, clampedDay);
-    }
-
-    // 計算繳款日 繳款日號小於結帳日號視為跨月 落在帳單月份的下個月
-    private static DateTime GetDueDate(CreditBill creditBill)
-    {
-        var year = creditBill.BillYear;
-        var month = creditBill.BillMonth;
-
-        if (creditBill.PaymentDueDay < creditBill.StatementDay)
-        {
-            month++;
-            if (month > 12)
-            {
-                month = 1;
-                year++;
-            }
-        }
-
-        var daysInMonth = DateTime.DaysInMonth(year, month);
-        var clampedDay = Math.Min(creditBill.PaymentDueDay, daysInMonth);
-        return new DateTime(year, month, clampedDay);
     }
 
     // 取得帳單金額

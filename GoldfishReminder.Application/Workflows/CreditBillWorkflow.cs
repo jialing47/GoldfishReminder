@@ -113,7 +113,7 @@ public partial class CreditBillWorkflow
 
         var activeBills = accountContext.CreditBills
             .Where(x => !x.Paid)
-            .Where(x => today <= GetDueDate(x))
+            .Where(x => today <= CreditBillSchedule.CalculateDueDate(x))
             .ToList();
 
         if (activeBills.Count == 0)
@@ -195,7 +195,7 @@ public partial class CreditBillWorkflow
 
         var activeBills = accountContext.CreditBills
             .Where(x => !x.Paid)
-            .Where(x => today <= GetDueDate(x))
+            .Where(x => today <= CreditBillSchedule.CalculateDueDate(x))
             .ToList();
 
         var accountGroup = BuildGroup(activeBills, accountContext.CreditSettings, accountContext.Banks, accountContext.PaymentAccounts, billContext.PaymentAccount.Id);
@@ -392,7 +392,7 @@ public partial class CreditBillWorkflow
     {
         var activeBills = dailyContext.CreditBills
             .Where(x => !x.Paid)
-            .Where(x => today <= GetDueDate(x))
+            .Where(x => today <= CreditBillSchedule.CalculateDueDate(x))
             .ToList();
 
         if (activeBills.Count == 0)

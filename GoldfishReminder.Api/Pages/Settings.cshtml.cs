@@ -5,6 +5,7 @@ using GoldfishReminder.Application.Services;
 using GoldfishReminder.Application.Workflows;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 
 namespace GoldfishReminder.Api.Pages;
 
@@ -12,12 +13,14 @@ public class SettingsModel : PageModel
 {
     private readonly ISettingsPageService settingsPageService;
     private readonly CreditBillWorkflow creditBillWorkflow;
+    private readonly ILogger<SettingsModel> logger;
 
     // 初始化頁面模型
-    public SettingsModel(ISettingsPageService settingsPageService, CreditBillWorkflow creditBillWorkflow)
+    public SettingsModel(ISettingsPageService settingsPageService, CreditBillWorkflow creditBillWorkflow, ILogger<SettingsModel> logger)
     {
         this.settingsPageService = settingsPageService;
         this.creditBillWorkflow = creditBillWorkflow;
+        this.logger = logger;
     }
 
     public string? ErrorMessage { get; private set; }
@@ -178,8 +181,9 @@ public class SettingsModel : PageModel
         {
             return await BankAccountBadRequestAsync(MapServiceErrorMessage(ex, "儲存銀行帳戶失敗 請稍後再試"));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "OnPostUpsertBankAccount failed userId={UserId}", userId);
             return await BankAccountBadRequestAsync("儲存銀行帳戶失敗 請稍後再試");
         }
 
@@ -249,8 +253,9 @@ public class SettingsModel : PageModel
         {
             return await CreditSettingBadRequestAsync(MapServiceErrorMessage(ex, "儲存信用卡設定失敗 請稍後再試"));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "OnPostUpsertCreditSetting failed userId={UserId}", userId);
             return await CreditSettingBadRequestAsync("儲存信用卡設定失敗 請稍後再試");
         }
 
@@ -311,8 +316,9 @@ public class SettingsModel : PageModel
         {
             return await CurrentBillAmountBadRequestAsync(MapServiceErrorMessage(ex, "更新帳單金額失敗"));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "OnPostUpdateBillAmount failed userId={UserId} billId={BillId}", userId, CurrentBillAmountForm.BillId);
             return await CurrentBillAmountBadRequestAsync("更新帳單金額失敗");
         }
 
@@ -363,8 +369,9 @@ public class SettingsModel : PageModel
             // billId 不屬於目前登入 user 的 IDOR 嘗試 給明確訊息避免誤導為系統失敗
             return await MarkPaidBadRequestAsync("此帳單不屬於你");
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "OnPostMarkBillPaid failed userId={UserId} billId={BillId}", userId, billId);
             return await MarkPaidBadRequestAsync("設定已繳費失敗");
         }
 
@@ -496,7 +503,7 @@ public class SettingsModel : PageModel
 
         if (message.Contains("AccountType must be"))
         {
-            return "帳戶類型只接受 digital 或 physical";
+            return "帳戶類型只接受 數位 或 實體";
         }
 
         if (message.Contains("BankCode is required"))

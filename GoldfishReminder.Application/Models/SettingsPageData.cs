@@ -60,23 +60,17 @@ public class CurrentBillItem
     public Guid Id { get; set; }
     public string BankCode { get; set; } = string.Empty;
     public string BankName { get; set; } = string.Empty;
-    public int BillYear { get; set; }
-    public int BillMonth { get; set; }
-    public int PaymentDueDay { get; set; }
+    public DateTime DueDate { get; set; }                                       // 真實繳款日 含跨月計算 跟歷史帳單對齊
     public int? BillAmount { get; set; }
     public bool AmountConfirmed { get; set; }
-    public bool Paid { get; set; }
     public string PaymentAccountName { get; set; } = string.Empty;
 }
 
 // 歷史帳單資料
 public class HistoryBillItem
 {
-    public Guid Id { get; set; }
     public string BankCode { get; set; } = string.Empty;
     public string BankName { get; set; } = string.Empty;
-    public int BillYear { get; set; }
-    public int BillMonth { get; set; }
     public int? BillAmount { get; set; }
     public bool Paid { get; set; }
     public DateTime DueDate { get; set; }
@@ -87,8 +81,6 @@ public class HistoryMonthOptionItem
 {
     public int Year { get; set; }
     public int Month { get; set; }
-    public string Value { get; set; } = string.Empty;
-    public string Text { get; set; } = string.Empty;
 }
 
 // 帳戶自動扣款影響摘要
