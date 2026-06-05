@@ -24,7 +24,8 @@ public class DiscordOnboardingService : IDiscordOnboardingService
     }
 
     //確保使用者與私人提醒頻道存在
-    public async Task<User> EnsureUserChannelAsync(string discordUserId, string? discordDisplayName, CancellationToken cancellationToken = default)
+    // forceRefresh 為 true 時跳過 DB 已記錄的 channel 信任 強制去 Discord 列頻道並重建 用於頻道被人為刪除後的補救
+    public async Task<User> EnsureUserChannelAsync(string discordUserId, string? discordDisplayName, bool forceRefresh, CancellationToken cancellationToken = default)
     {
         var guildId = discordSettingsProvider.GetGuildId();
         var categoryName = discordSettingsProvider.GetCategoryName();
@@ -41,6 +42,15 @@ public class DiscordOnboardingService : IDiscordOnboardingService
 
         var normalizedDiscordUserId = discordUserId.Trim();
         var user = await GetOrCreateUserAsync(normalizedDiscordUserId, discordDisplayName, cancellationToken);
+
+        // 信任 DB 紀錄 已有 channel id 直接 return 不打 Discord API 驗證
+        // 一般情境 channel 不會被刪 省下跨網路 list channels 的 ~2-3 秒延遲
+        // forceRefresh 為 true 時跳過信任 走完整重建流程 由 caller 在訊息發送 404 時觸發
+        if (!forceRefresh && !string.IsNullOrWhiteSpace(user.DiscordPrivateChannelId))
+        {
+            return user;
+        }
+
         var channels = await discordApiClient.GetJsonAsync($"https://discord.com/api/v10/guilds/{guildId}/channels", cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(user.DiscordPrivateChannelId) && ChannelExists(channels, user.DiscordPrivateChannelId))
