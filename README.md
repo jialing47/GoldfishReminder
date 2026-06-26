@@ -99,10 +99,13 @@ User → Discord → DuckDNS DNS 解析
 
 ### Discord `/balance` 指令
 
-1. User 輸入 `/balance`，autocomplete 列出該 user 的啟用帳戶
-2. 選完帳戶跳 modal 輸入新餘額
-3. 後端驗證帳戶擁有權（`UserId` 比對），更新餘額，呼叫 `ProcessAccountAsync` 重跑該帳戶底下所有信用卡的決策
-4. 回覆 ephemeral「已更新 XXX 餘額為 YYY」
+走 deferred + 背景佇列，與 `gr_link` 同一套，避開 Discord 首次回應 3 秒硬限制。
+
+1. User 輸入 `/balance`（無參數），Controller 立刻回 deferred response (type 5, ephemeral)
+2. 背景 worker 查該 user 的啟用帳戶，用 followup 送出帶帳戶下拉選單（String Select Menu，最多 25 個）的 ephemeral 訊息
+3. User 從下拉選單選帳戶，立即跳 modal 輸入新餘額（此步零 DB，modal 不能 defer）
+4. 送出 modal 先驗金額格式，再回 deferred；背景驗證帳戶擁有權（`UserId` 比對）、更新餘額，呼叫 `ProcessAccountAsync` 重跑該帳戶底下所有信用卡的決策
+5. followup 回覆 ephemeral「已更新 XXX 餘額為 YYY」
 
 ### 本月待繳 與 歷史帳單
 
@@ -170,7 +173,7 @@ dotnet user-secrets set "Web:BaseUrl" "https://你的-ngrok-或正式網址"
 
 **3. 註冊 Discord `/balance` slash command**
 
-打一次 Discord API 註冊 guild command，用 REST Client 或 curl。
+打一次 Discord API 註冊 guild command，用 REST Client 或 curl。此指令**無參數**，帳戶改由互動中的下拉選單（String Select Menu）選擇，不要帶 `account` option（舊版的 autocomplete option 已移除，若仍照舊註冊會讓 `/balance` 無法使用）。
 
 ```http
 POST https://discord.com/api/v10/applications/{applicationId}/guilds/{guildId}/commands
@@ -180,16 +183,7 @@ Content-Type: application/json
 {
   "name": "balance",
   "description": "更新銀行帳戶餘額",
-  "type": 1,
-  "options": [
-    {
-      "name": "account",
-      "description": "選擇要更新的帳戶",
-      "type": 3,
-      "required": true,
-      "autocomplete": true
-    }
-  ]
+  "type": 1
 }
 ```
 

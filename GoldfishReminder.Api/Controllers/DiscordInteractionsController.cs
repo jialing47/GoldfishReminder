@@ -19,7 +19,7 @@ public class DiscordInteractionsController : ControllerBase
     private const string BillAmountPrefix = "gr_bill_amount:";
     private const string BillAmountModalPrefix = "gr_bill_amount_modal:";
     private const string BalanceCommandName = "balance";
-    private const string BalanceAccountOptionName = "account";
+    private const string BalanceSelectCustomId = "gr_balance_select";
     private const string BalanceModalPrefix = "gr_balance_modal:";
     private const string BalanceModalInputId = "newBalance";
 
@@ -33,23 +33,17 @@ public class DiscordInteractionsController : ControllerBase
     private readonly IBackgroundTaskQueue taskQueue;
     private readonly IDiscordSignatureVerifier discordSignatureVerifier;
     private readonly IUserService userService;
-    private readonly IBankAccountService bankAccountService;
-    private readonly ICreditBillDataService creditBillDataService;
 
     public DiscordInteractionsController(
         CreditBillWorkflow creditBillWorkflow,
         IBackgroundTaskQueue taskQueue,
         IDiscordSignatureVerifier discordSignatureVerifier,
-        IUserService userService,
-        IBankAccountService bankAccountService,
-        ICreditBillDataService creditBillDataService)
+        IUserService userService)
     {
         this.creditBillWorkflow = creditBillWorkflow;
         this.taskQueue = taskQueue;
         this.discordSignatureVerifier = discordSignatureVerifier;
         this.userService = userService;
-        this.bankAccountService = bankAccountService;
-        this.creditBillDataService = creditBillDataService;
     }
 
     // 接收 Discord interaction
@@ -182,6 +176,19 @@ public class DiscordInteractionsController : ControllerBase
 
                 return Ok(BuildBillAmountModalResponse(billId));
             }
+
+            // /balance 下拉選單選定帳戶 直接回更新餘額 modal 此步零 DB modal 不能 defer
+            if (string.Equals(customId, BalanceSelectCustomId, StringComparison.Ordinal))
+            {
+                var accountIdText = request.Data.GetFirstSelectedValue();
+
+                if (!Guid.TryParse(accountIdText, out var accountId))
+                {
+                    return Ok(BuildEphemeralMessage("帳戶未選擇或格式錯誤"));
+                }
+
+                return Ok(BuildBalanceModalResponse(accountId));
+            }
         }
 
         // type 2 slash command 目前只支援 /balance
@@ -198,57 +205,58 @@ public class DiscordInteractionsController : ControllerBase
                 return BadRequest(new { message = "Discord user id is required." });
             }
 
-            var user = await userService.GetByDiscordIdAsync(discordUserId, cancellationToken);
-            if (user == null)
+            if (string.IsNullOrWhiteSpace(request.ApplicationId))
             {
-                return Ok(BuildEphemeralMessage("請先在綁定頻道點擊 gr_link 完成初始化"));
+                return BadRequest(new { message = "ApplicationId is required." });
             }
 
-            var accountIdText = request.Data.GetOptionValue(BalanceAccountOptionName);
-            if (!Guid.TryParse(accountIdText, out var accountId))
+            if (string.IsNullOrWhiteSpace(request.Token))
             {
-                return Ok(BuildEphemeralMessage("帳戶未選擇或格式錯誤"));
+                return BadRequest(new { message = "Interaction token is required." });
             }
 
-            var accounts = await creditBillDataService.GetUserAccountsAsync(user.Id, cancellationToken);
-            var selected = accounts.FirstOrDefault(x => x.Id == accountId);
-            if (selected == null)
+            var applicationId = request.ApplicationId;
+            var interactionToken = request.Token;
+
+            // 查使用者與帳戶都要跨區打 DB 為避開首次回應 3 秒硬限制先 defer 再用背景佇列補上帳戶下拉選單
+            taskQueue.Enqueue(async (serviceProvider, stoppingToken) =>
             {
-                return Ok(BuildEphemeralMessage("找不到此帳戶或帳戶已停用"));
-            }
+                var scopedUserService = serviceProvider.GetRequiredService<IUserService>();
+                var creditBillDataService = serviceProvider.GetRequiredService<ICreditBillDataService>();
+                var discordApiClient = serviceProvider.GetRequiredService<IDiscordApiClient>();
 
-            return Ok(BuildBalanceModalResponse(selected));
-        }
+                try
+                {
+                    var user = await scopedUserService.GetByDiscordIdAsync(discordUserId, stoppingToken);
+                    if (user == null)
+                    {
+                        await discordApiClient.SendFollowupAsync(applicationId, interactionToken, "請先在綁定頻道點擊 gr_link 完成初始化", true, stoppingToken);
+                        return;
+                    }
 
-        // type 4 autocomplete 動態回覆帳戶選項
-        if (request.Type == 4)
-        {
-            if (request.Data == null || !string.Equals(request.Data.Name, BalanceCommandName, StringComparison.Ordinal))
+                    var accounts = await creditBillDataService.GetUserAccountsAsync(user.Id, stoppingToken);
+                    if (accounts.Count == 0)
+                    {
+                        await discordApiClient.SendFollowupAsync(applicationId, interactionToken, "尚無可更新餘額的帳戶", true, stoppingToken);
+                        return;
+                    }
+
+                    var payload = BuildBalanceSelectPayload(accounts);
+                    await discordApiClient.SendFollowupPayloadAsync(applicationId, interactionToken, payload, stoppingToken);
+                }
+                catch (Exception)
+                {
+                    // 查詢或送出失敗時回使用者通用錯誤句 避免卡在「思考中」 再 rethrow 讓 hosted service 記錄錯誤
+                    await discordApiClient.SendFollowupAsync(applicationId, interactionToken, "查詢帳戶失敗 請稍後再試", true, stoppingToken);
+                    throw;
+                }
+            });
+
+            return Ok(new
             {
-                return Ok(BuildAutocompleteResponse(Array.Empty<UserAccountOption>()));
-            }
-
-            var discordUserId = request.GetDiscordUserId();
-            if (string.IsNullOrWhiteSpace(discordUserId))
-            {
-                return Ok(BuildAutocompleteResponse(Array.Empty<UserAccountOption>()));
-            }
-
-            var user = await userService.GetByDiscordIdAsync(discordUserId, cancellationToken);
-            if (user == null)
-            {
-                return Ok(BuildAutocompleteResponse(Array.Empty<UserAccountOption>()));
-            }
-
-            var accounts = await creditBillDataService.GetUserAccountsAsync(user.Id, cancellationToken);
-            var focusedValue = request.Data.GetOptionValue(BalanceAccountOptionName, focusedOnly: true);
-            if (focusedValue == null)
-            {
-                focusedValue = string.Empty;
-            }
-            var filtered = FilterAccounts(accounts, focusedValue);
-
-            return Ok(BuildAutocompleteResponse(filtered));
+                type = 5,
+                data = new { flags = 64 }
+            });
         }
 
         if (request.Type == 5)
@@ -327,24 +335,73 @@ public class DiscordInteractionsController : ControllerBase
                     return BadRequest(new { message = "Discord user id is required." });
                 }
 
-                var user = await userService.GetByDiscordIdAsync(discordUserId, cancellationToken);
-                if (user == null)
+                if (string.IsNullOrWhiteSpace(request.ApplicationId))
                 {
-                    return Ok(BuildEphemeralMessage("請先完成初始化"));
+                    return BadRequest(new { message = "ApplicationId is required." });
                 }
 
-                try
+                if (string.IsNullOrWhiteSpace(request.Token))
                 {
-                    // 更新餘額後重跑該帳戶底下所有帳單的提醒決策
-                    var updated = await bankAccountService.UpdateBalanceAsync(accountId, user.Id, newBalance, cancellationToken);
-                    await creditBillWorkflow.ProcessAccountAsync(accountId, cancellationToken);
+                    return BadRequest(new { message = "Interaction token is required." });
+                }
 
-                    return Ok(BuildEphemeralMessage($"已更新 {updated.AccountName} 餘額為 {newBalance:N0}"));
-                }
-                catch (UnauthorizedAccessException)
+                var applicationId = request.ApplicationId;
+                var interactionToken = request.Token;
+
+                // 更新餘額與重跑提醒決策都要跨區打 DB 先 defer 再用背景佇列補回結果
+                taskQueue.Enqueue(async (serviceProvider, stoppingToken) =>
                 {
-                    return Ok(BuildEphemeralMessage("找不到此帳戶或帳戶已停用"));
-                }
+                    var scopedUserService = serviceProvider.GetRequiredService<IUserService>();
+                    var bankAccountService = serviceProvider.GetRequiredService<IBankAccountService>();
+                    var scopedWorkflow = serviceProvider.GetRequiredService<CreditBillWorkflow>();
+                    var discordApiClient = serviceProvider.GetRequiredService<IDiscordApiClient>();
+
+                    // 標記餘額是否已成功寫入 DB 一旦為 true 後續即使提醒重算失敗也不再回報「更新失敗」避免矛盾訊息
+                    var balanceUpdated = false;
+
+                    try
+                    {
+                        var user = await scopedUserService.GetByDiscordIdAsync(discordUserId, stoppingToken);
+                        if (user == null)
+                        {
+                            await discordApiClient.SendFollowupAsync(applicationId, interactionToken, "請先完成初始化", true, stoppingToken);
+                            return;
+                        }
+
+                        // 更新餘額 此步成功即代表餘額已寫入 DB
+                        var updated = await bankAccountService.UpdateBalanceAsync(accountId, user.Id, newBalance, stoppingToken);
+                        balanceUpdated = true;
+
+                        // 餘額已更新 先回報成功 後續提醒重算即使失敗 餘額已更新仍是事實
+                        await discordApiClient.SendFollowupAsync(applicationId, interactionToken, $"已更新 {updated.AccountName} 餘額為 {newBalance:N0}", true, stoppingToken);
+
+                        // 重跑該帳戶底下所有帳單的提醒決策
+                        await scopedWorkflow.ProcessAccountAsync(accountId, stoppingToken);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // 帳戶不屬於此使用者或已停用 屬預期內的業務狀況 只有在尚未回報成功時才回此訊息
+                        if (!balanceUpdated)
+                        {
+                            await discordApiClient.SendFollowupAsync(applicationId, interactionToken, "找不到此帳戶或帳戶已停用", true, stoppingToken);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // 僅在餘額尚未更新前失敗才回報失敗 避免在已回報成功後又送矛盾訊息 再 rethrow 讓 hosted service 記錄錯誤
+                        if (!balanceUpdated)
+                        {
+                            await discordApiClient.SendFollowupAsync(applicationId, interactionToken, "更新餘額失敗 請稍後再試", true, stoppingToken);
+                        }
+                        throw;
+                    }
+                });
+
+                return Ok(new
+                {
+                    type = 5,
+                    data = new { flags = 64 }
+                });
             }
         }
 
@@ -443,18 +500,16 @@ public class DiscordInteractionsController : ControllerBase
         };
     }
 
-    // 建立更新餘額 modal 回應 customId 帶 accountId 讓後續 submit 知道要更新哪個帳戶
-    private static object BuildBalanceModalResponse(UserAccountOption account)
+    // 建立更新餘額 modal 回應 此步零 DB 故為通用版 customId 帶 accountId 讓 submit 知道要更新哪個帳戶 帳戶名只在最後成功訊息出現
+    private static object BuildBalanceModalResponse(Guid accountId)
     {
-        var placeholder = $"目前餘額 {account.Balance:N0}";
-
         return new
         {
             type = 9,
             data = new
             {
-                custom_id = $"{BalanceModalPrefix}{account.Id}",
-                title = $"更新 {account.AccountName} 餘額",
+                custom_id = $"{BalanceModalPrefix}{accountId}",
+                title = "更新帳戶餘額",
                 components = new object[]
                 {
                     new
@@ -471,7 +526,7 @@ public class DiscordInteractionsController : ControllerBase
                                 min_length = 1,
                                 max_length = 10,
                                 required = true,
-                                placeholder = placeholder
+                                placeholder = "請輸入新餘額"
                             }
                         }
                     }
@@ -480,35 +535,47 @@ public class DiscordInteractionsController : ControllerBase
         };
     }
 
-    // 建立 autocomplete 回應 choices 最多 25
-    private static object BuildAutocompleteResponse(IReadOnlyList<UserAccountOption> accounts)
+    // 建立 /balance 帳戶下拉選單 followup payload 帶 String Select Menu 選項最多 25 ephemeral 由 flags=64 控制
+    private static object BuildBalanceSelectPayload(IReadOnlyList<UserAccountOption> accounts)
     {
-        var choices = new List<object>(accounts.Count);
+        var options = new List<object>();
 
-        foreach (var account in accounts)
+        foreach (var account in accounts.Take(25))
         {
-            var name = $"{account.BankName} {account.AccountName} ({account.Balance:N0})";
+            var label = $"{account.BankName} {account.AccountName} ({account.Balance:N0})";
 
-            // Discord autocomplete choice name 上限 100 字
-            if (name.Length > 100)
+            // Discord select option label 上限 100 字
+            if (label.Length > 100)
             {
-                name = name[..100];
+                label = label[..100];
             }
 
-            choices.Add(new
+            options.Add(new
             {
-                name = name,
+                label = label,
                 value = account.Id.ToString()
             });
         }
 
+        var selectMenu = new
+        {
+            type = 3,
+            custom_id = BalanceSelectCustomId,
+            placeholder = "選擇要更新餘額的帳戶",
+            options = options
+        };
+
+        var actionRow = new
+        {
+            type = 1,
+            components = new object[] { selectMenu }
+        };
+
         return new
         {
-            type = 8,
-            data = new
-            {
-                choices = choices
-            }
+            content = "請選擇要更新餘額的帳戶",
+            components = new object[] { actionRow },
+            flags = 64
         };
     }
 
@@ -526,22 +593,6 @@ public class DiscordInteractionsController : ControllerBase
         };
     }
 
-    // 以 user focused 輸入過濾帳戶選項 大小寫不敏感 最多 25 筆
-    private static IReadOnlyList<UserAccountOption> FilterAccounts(IReadOnlyList<UserAccountOption> accounts, string focused)
-    {
-        IEnumerable<UserAccountOption> filtered = accounts;
-
-        if (!string.IsNullOrWhiteSpace(focused))
-        {
-            var keyword = focused.Trim();
-            filtered = accounts.Where(x =>
-                x.AccountName.Contains(keyword, StringComparison.OrdinalIgnoreCase)
-                || x.BankCode.Contains(keyword, StringComparison.OrdinalIgnoreCase)
-                || x.BankName.Contains(keyword, StringComparison.OrdinalIgnoreCase));
-        }
-
-        return filtered.Take(25).ToList();
-    }
 }
 
 // Discord interaction request
@@ -649,36 +700,21 @@ public class DiscordInteractionData
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
-    [JsonPropertyName("options")]
-    public List<DiscordCommandOption>? Options { get; set; }
-
     [JsonPropertyName("components")]
     public List<DiscordInteractionComponent>? Components { get; set; }
 
-    // 取出指定 option 的值 若 focused=true 只取 focused
-    public string? GetOptionValue(string optionName, bool focusedOnly = false)
+    [JsonPropertyName("values")]
+    public List<string>? Values { get; set; }
+
+    // 取出下拉選單第一個選擇值 type 3 message component 的選擇結果放在 data.values
+    public string? GetFirstSelectedValue()
     {
-        if (Options == null)
+        if (Values == null || Values.Count == 0)
         {
             return null;
         }
 
-        foreach (var option in Options)
-        {
-            if (option.Name != optionName)
-            {
-                continue;
-            }
-
-            if (focusedOnly && !option.Focused)
-            {
-                return null;
-            }
-
-            return option.Value;
-        }
-
-        return null;
+        return Values[0];
     }
 
     public string? GetFirstValue(string customId)
@@ -706,19 +742,6 @@ public class DiscordInteractionData
 
         return null;
     }
-}
-
-// slash command option
-public class DiscordCommandOption
-{
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-
-    [JsonPropertyName("value")]
-    public string? Value { get; set; }
-
-    [JsonPropertyName("focused")]
-    public bool Focused { get; set; }
 }
 
 // Discord interaction component

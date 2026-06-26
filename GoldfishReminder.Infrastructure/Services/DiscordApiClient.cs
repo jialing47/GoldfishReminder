@@ -62,7 +62,7 @@ public class DiscordApiClient : IDiscordApiClient
     //送出 followup 訊息
     public async Task SendFollowupAsync(string applicationId, string interactionToken, string content, bool isEphemeral, CancellationToken cancellationToken = default)
     {
-        var url = $"https://discord.com/api/v10/webhooks/{applicationId}/{interactionToken}";
+        var url = BuildFollowupUrl(applicationId, interactionToken);
 
         var flags = 0;
         if (isEphemeral)
@@ -77,6 +77,19 @@ public class DiscordApiClient : IDiscordApiClient
         };
 
         await PostJsonAsync(url, payload, cancellationToken);
+    }
+
+    //送出帶自訂 payload 的 followup 訊息 ephemeral 與元件由呼叫端自行在 payload 內帶上
+    public async Task SendFollowupPayloadAsync(string applicationId, string interactionToken, object payload, CancellationToken cancellationToken = default)
+    {
+        var url = BuildFollowupUrl(applicationId, interactionToken);
+        await PostJsonAsync(url, payload, cancellationToken);
+    }
+
+    //組出 followup webhook URL 兩個 followup 方法共用避免重複硬寫
+    private static string BuildFollowupUrl(string applicationId, string interactionToken)
+    {
+        return $"https://discord.com/api/v10/webhooks/{applicationId}/{interactionToken}";
     }
 
     //送出頻道訊息
