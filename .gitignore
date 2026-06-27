@@ -380,3 +380,10 @@ secrets.json
 
 # Optional: local publish / deployment leftovers
 *.publishsettings
+
+# Build artifacts（publish 打包產物，不進版控）
+goldfish-app.zip
+
+# 預防性：本機/repo 目前並無此檔，真檔在 VM 的 /etc/goldfish-cron.env（含 token）；
+# 此規則只為擋未來誤把真 env 放進 repo，版控僅追蹤 deploy/goldfish-cron.env.example 範本
+goldfish-cron.env

@@ -1,0 +1,123 @@
+#!/bin/bash
+# 金魚腦助手 VM 部署腳本
+# 用法: ./deploy.sh ~/goldfish-app.zip
+# 或加 PATH 後: deploy.sh ~/goldfish-app.zip
+
+set -e  # 任何指令失敗立即中止
+
+# 參數檢查
+if [ -z "$1" ]; then
+    echo "用法: $0 <zip 路徑>"
+    echo "範例: $0 ~/goldfish-app.zip"
+    exit 1
+fi
+
+zipPath="$1"
+appDir="$HOME/goldfish-app"
+backupDir="$HOME/goldfish-app.bak"
+productionConfig="appsettings.Production.json"
+serviceName="goldfish"
+healthCheckUrl="https://<DOMAIN>/"
+
+if [ ! -f "$zipPath" ]; then
+    echo "[X] 找不到 zip: $zipPath"
+    exit 1
+fi
+
+echo "=== [1/7] 停止服務 ==="
+sudo systemctl stop "$serviceName"
+sleep 2
+
+echo "=== [2/7] 備份舊版本 ==="
+if [ -d "$appDir" ]; then
+    # 保留 Production config 跑備份 過程不刪
+    rm -rf "$backupDir"
+    cp -r "$appDir" "$backupDir"
+    echo "舊版已備份到 $backupDir"
+else
+    echo "舊版不存在 跳過備份"
+    mkdir -p "$appDir"
+fi
+
+echo "=== [3/7] 保護 Production config ==="
+configBackup=""
+if [ -f "$appDir/$productionConfig" ]; then
+    configBackup="/tmp/$productionConfig.$$"
+    cp "$appDir/$productionConfig" "$configBackup"
+    echo "Production config 暫存到 $configBackup"
+else
+    echo "[警告] 找不到 $productionConfig 首次部署嗎?"
+fi
+
+echo "=== [4/7] 解壓新版 ==="
+# 不刪整個目錄 只覆蓋同名檔
+cd "$appDir"
+unzip -o "$zipPath"
+
+# 處理 zip 多包一層的情形
+if [ -d "$appDir/publish" ] && [ ! -f "$appDir/GoldfishReminder.Api" ]; then
+    echo "偵測到 zip 多包 publish 一層 自動展平"
+    mv "$appDir/publish/"* "$appDir/"
+    rmdir "$appDir/publish"
+fi
+
+echo "=== [5/7] 還原 Production config 與權限 ==="
+if [ -n "$configBackup" ] && [ -f "$configBackup" ]; then
+    cp "$configBackup" "$appDir/$productionConfig"
+    chmod 600 "$appDir/$productionConfig"
+    rm "$configBackup"
+    echo "Production config 已還原 權限 600"
+fi
+
+# 刪 Development config 避免 production 環境誤讀
+rm -f "$appDir/appsettings.Development.json"
+
+# 執行檔權限
+chmod +x "$appDir/GoldfishReminder.Api"
+
+echo "=== [6/7] 啟動服務 ==="
+sudo systemctl start "$serviceName"
+sleep 5
+
+# 確認 service 真的起來
+serviceStatus=$(sudo systemctl is-active "$serviceName")
+if [ "$serviceStatus" != "active" ]; then
+    echo "[X] Service 啟動失敗 自動 rollback"
+    sudo systemctl stop "$serviceName" || true
+    rm -rf "$appDir"
+    mv "$backupDir" "$appDir"
+    sudo systemctl start "$serviceName"
+    echo "舊版已還原 請看 log 排查:"
+    echo "    sudo journalctl -u $serviceName -n 50 --no-pager"
+    exit 1
+fi
+
+echo "=== [7/7] 健康驗證 ==="
+# 內部 port
+if curl -fsI -o /dev/null http://localhost:5000/; then
+    echo "[OK] localhost:5000 回應正常"
+else
+    echo "[警告] localhost:5000 沒回應"
+fi
+
+# 對外
+if curl -fsI -o /dev/null "$healthCheckUrl"; then
+    echo "[OK] $healthCheckUrl 回應正常"
+else
+    echo "[警告] 對外 URL 沒回應 可能 nginx 或 SSL 問題"
+fi
+
+# 靜態檔
+if curl -fsI -o /dev/null "${healthCheckUrl}logo.png"; then
+    echo "[OK] logo.png 可取"
+else
+    echo "[警告] logo.png 取不到"
+fi
+
+echo ""
+echo "=== 部署完成 ==="
+echo "最近 log:"
+sudo journalctl -u "$serviceName" -n 10 --no-pager
+echo ""
+echo "如要看更多 log: sudo journalctl -u $serviceName -f"
+echo "如要 rollback: sudo systemctl stop $serviceName && rm -rf $appDir && mv $backupDir $appDir && sudo systemctl start $serviceName"

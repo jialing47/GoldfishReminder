@@ -1,0 +1,8 @@
+# 強制行尾，避免 core.autocrlf 在 checkout 時把跨平台檔案轉壞
+
+# deploy/ 下是要在 Linux VM 執行的腳本與設定，必須 LF
+# （CRLF 會導致 bad interpreter: /bin/bash^M 與 systemd 解析失敗）
+deploy/** text eol=lf
+
+# Windows 批次檔維持 CRLF
+*.bat text eol=crlf

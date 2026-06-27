@@ -1,0 +1,19 @@
+[Unit]
+Description=GoldfishReminder ASP.NET Core app
+After=network.target
+
+[Service]
+Type=simple
+User=<VM_USER>
+WorkingDirectory=/home/<VM_USER>/goldfish-app
+ExecStart=/home/<VM_USER>/goldfish-app/GoldfishReminder.Api
+Restart=always
+RestartSec=10
+SyslogIdentifier=goldfish
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+Environment=DOTNET_CLI_HOME=/home/<VM_USER>
+
+[Install]
+WantedBy=multi-user.target
+

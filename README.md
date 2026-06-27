@@ -226,58 +226,23 @@ dotnet run
 
 ## 部署
 
-### VM 配置
+部署在 GCP e2-micro（us-central1, Ubuntu 22.04）：nginx 443 SSL terminate 反代 `localhost:5000`，systemd 管理 `goldfish`，certbot 自動續憑證，Linux cron 觸發每日提醒與 keep-warm；資料庫倚賴 Neon 免費版 7 天 PITR。
 
-- 規格：e2-micro（2 vCPU shared, 1GB RAM, 30GB 標準磁碟）
-- OS：Ubuntu 22.04 LTS Minimal
-- Region：us-central1（GCP free tier 限定 us-central1 / us-west1 / us-east1）
-- Swap：2GB（防 .NET app + nginx 同跑時瞬間 OOM）
-- 時區：Asia/Taipei
+- VM 規格：e2-micro（2 vCPU shared, 1GB RAM, 30GB），2GB swap 防 OOM，時區 Asia/Taipei
+- 發佈為 **self-contained + single-file**（對應 systemd `ExecStart` 的單一執行檔 `GoldfishReminder.Api`）
 
-### 重要檔案位置
+**完整部署流程、VM 設定檔快照、cron、回滾與排錯見 [`deploy/README.md`](deploy/README.md)。** 例行更新三步：本機跑 repo 根的 `publish.bat` 產出 `goldfish-app.zip` → 傳上 VM → `goldfish-deploy ~/goldfish-app.zip`（自動備份 / 健康檢查 / 失敗 rollback）。
+
+### 重要檔案位置（VM）
 
 | 用途 | 路徑 |
 |---|---|
-| App 執行檔 | `~/goldfish-app/` |
-| App 設定（含 secret） | `~/goldfish-app/appsettings.Production.json`（chmod 600） |
-| systemd service | `/etc/systemd/system/goldfish.service` |
-| nginx 設定 | `/etc/nginx/sites-enabled/goldfish` |
-| SSL 憑證 | `/etc/letsencrypt/live/<duckdns-name>/` |
+| App 執行檔 / 設定 | `~/goldfish-app/`（`appsettings.Production.json` chmod 600） |
+| systemd | `/etc/systemd/system/goldfish.service` |
+| nginx | `/etc/nginx/sites-enabled/default` |
+| daily 觸發 / token | `/usr/local/bin/goldfish-daily.sh`、`/etc/goldfish-cron.env` |
+| SSL 憑證 | `/etc/letsencrypt/live/<DOMAIN>/` |
 | App log | `sudo journalctl -u goldfish` |
-
-### Cron 設定
-
-```
-# 每日台灣時間 10:00 觸發 daily reminder
-0 2 * * * curl -s -X POST -H "Authorization: Bearer <token>" https://<你的網址>/api/jobs/daily-reminder > /dev/null 2>&1
-
-# 每 5 分鐘 keep-warm 防 .NET app 被 swap 換出造成 cold start
-*/5 * * * * curl -s -o /dev/null https://<你的網址>/api/discord/interactions -X POST -H "Content-Type: application/json" -d '{"type":1}'
-```
-
-`0 2 * * *` 是 UTC 02:00 = 台灣 10:00（VM 時區設 Asia/Taipei 也可寫 `0 10 * * *`）。
-
-### 部署新版本
-
-**本機 publish**：
-```bash
-cd GoldfishReminder.Api
-dotnet publish -c Release -r linux-x64 --self-contained false -o ./publish
-```
-
-**上傳 + 重啟**：
-```bash
-gcloud compute scp --recurse ./publish/* goldfish-vm:~/goldfish-app/ --zone=us-central1-a
-gcloud compute ssh goldfish-vm --zone=us-central1-a --command "sudo systemctl restart goldfish"
-```
-
-### DB 備份
-
-VM 上設 cron 每天 `pg_dump` Neon DB dump 一份留 7 天，雙保險（Neon 免費版本身就有 7 天 PITR）：
-
-```bash
-0 3 * * * pg_dump "$NEON_CONNECTION_STRING" | gzip > /home/ubuntu/backups/goldfish-$(date +\%Y\%m\%d).sql.gz && find /home/ubuntu/backups -name "goldfish-*.sql.gz" -mtime +7 -delete
-```
 
 ## 排錯
 

@@ -1,0 +1,8 @@
+# GoldfishReminder — root crontab（sudo crontab -e 編輯／sudo crontab - 還原）
+# VM 時區 Asia/Taipei 時間即台灣時間
+
+# 每日 10:00 觸發 daily reminder（實際工作在 goldfish-daily.sh，token 從 /etc/goldfish-cron.env 載入）
+0 10 * * * /usr/local/bin/goldfish-daily.sh
+
+# 每 5 分鐘 keep-warm 防 .NET app 被 swap 換出造成 cold start
+*/5 * * * * /usr/bin/curl -sS -o /dev/null https://<DOMAIN>/
