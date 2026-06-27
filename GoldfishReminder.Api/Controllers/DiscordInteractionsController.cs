@@ -378,9 +378,9 @@ public class DiscordInteractionsController : ControllerBase
                         // 重跑該帳戶底下所有帳單的提醒決策
                         await scopedWorkflow.ProcessAccountAsync(accountId, stoppingToken);
                     }
-                    catch (UnauthorizedAccessException)
+                    catch (Exception ex) when (ex is UnauthorizedAccessException || ex is KeyNotFoundException)
                     {
-                        // 帳戶不屬於此使用者或已停用 屬預期內的業務狀況 只有在尚未回報成功時才回此訊息
+                        // 帳戶不屬於此使用者、或根本不存在（含 custom_id 被竄改成不存在的 id）屬預期內狀況 不視為系統錯誤 不 rethrow 只在尚未回報成功時回此訊息
                         if (!balanceUpdated)
                         {
                             await discordApiClient.SendFollowupAsync(applicationId, interactionToken, "找不到此帳戶或帳戶已停用", true, stoppingToken);

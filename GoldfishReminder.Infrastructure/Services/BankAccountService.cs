@@ -156,6 +156,12 @@ public class BankAccountService : IBankAccountService
             throw new UnauthorizedAccessException($"BankAccount does not belong to the user. AccountId:{accountId}");
         }
 
+        // 停用帳戶不可更新餘額 防止竄改 custom_id 塞已停用帳戶（下拉選單本就不列停用帳戶）
+        if (!bankAccount.Enabled)
+        {
+            throw new UnauthorizedAccessException($"BankAccount is disabled. AccountId:{accountId}");
+        }
+
         bankAccount.Balance = newBalance;
         bankAccount.BalanceUpdatedAt = DateTimeOffset.UtcNow;
 
